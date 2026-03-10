@@ -1,0 +1,45 @@
+node_modules/
+dist/
+*.tgz
+
+# Output
+ditto-output/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Debug / Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Coverage
+coverage/
+
+# Temp
+tmp/
+.tmp/
+
+# Turbo / Cache
+.turbo/
+.cache/
+.eslintcache
+
+# Lock (keep pnpm-lock)
+package-lock.json
+yarn.lock

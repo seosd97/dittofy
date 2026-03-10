@@ -1,0 +1,26 @@
+{
+	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"organizeImports": {
+		"enabled": true
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 100
+	},
+	"javascript": {
+		"formatter": {
+			"semicolons": "asNeeded",
+			"quoteStyle": "double"
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true
+		}
+	},
+	"files": {
+		"ignore": ["node_modules", "dist", "ditto-output", "tests/fixtures"]
+	}
+}
