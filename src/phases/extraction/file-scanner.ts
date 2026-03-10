@@ -1,69 +1,14 @@
 import { lstat, readdir } from "node:fs/promises"
 import { extname, join } from "node:path"
 import { glob } from "tinyglobby"
+import {
+	CONFIG_PATTERNS,
+	EXTRACTION_LIMITS,
+	IGNORE_PATTERNS,
+	INCLUDE_EXTENSIONS,
+	TREE_IGNORE_DIRS,
+} from "../../constants/extraction.js"
 import type { FileTreeNode } from "../../types/extraction.js"
-
-const IGNORE_PATTERNS = [
-	"**/node_modules/**",
-	"**/dist/**",
-	"**/build/**",
-	"**/out/**",
-	"**/.next/**",
-	"**/.nuxt/**",
-	"**/.svelte-kit/**",
-	"**/.astro/**",
-	"**/.output/**",
-	"**/.git/**",
-	"**/.idea/**",
-	"**/.vscode/**",
-	"**/coverage/**",
-	"**/__tests__/**",
-	"**/*.test.*",
-	"**/*.spec.*",
-	"**/*.stories.*",
-	"**/.storybook/**",
-	"**/cypress/**",
-	"**/e2e/**",
-	"**/public/assets/**",
-	"**/*.map",
-	"**/CHANGELOG*",
-	"**/LICENSE*",
-	"**/.env*",
-	"**/package-lock.json",
-	"**/pnpm-lock.yaml",
-	"**/yarn.lock",
-]
-
-const INCLUDE_EXTENSIONS = [
-	".tsx",
-	".jsx",
-	".vue",
-	".svelte",
-	".astro",
-	".css",
-	".scss",
-	".sass",
-	".less",
-	".ts",
-	".js",
-	".mjs",
-	".cjs",
-	".svg",
-	".json",
-]
-
-const CONFIG_INCLUDE = [
-	"package.json",
-	"tailwind.config.*",
-	"postcss.config.*",
-	"tsconfig.json",
-	"tsconfig.*.json",
-	"next.config.*",
-	"vite.config.*",
-	"svelte.config.*",
-	"astro.config.*",
-	"nuxt.config.*",
-]
 
 export interface ScanResult {
 	fileTree: FileTreeNode[]
@@ -80,21 +25,22 @@ export async function scanFiles(rootPath: string): Promise<ScanResult> {
 	// Scan all files with ignore patterns
 	const allFiles = await glob("**/*", {
 		cwd: rootPath,
-		ignore: IGNORE_PATTERNS,
+		ignore: [...IGNORE_PATTERNS],
 		onlyFiles: true,
 		dot: false,
 	})
 
 	// Filter by extension
+	const includeSet = new Set<string>(INCLUDE_EXTENSIONS)
 	const relevantFiles = allFiles.filter((file) => {
 		const ext = extname(file).toLowerCase()
-		return INCLUDE_EXTENSIONS.includes(ext)
+		return includeSet.has(ext)
 	})
 
 	// Collect config files separately
-	const configFiles = await glob(CONFIG_INCLUDE, {
+	const configFiles = await glob([...CONFIG_PATTERNS], {
 		cwd: rootPath,
-		ignore: IGNORE_PATTERNS,
+		ignore: [...IGNORE_PATTERNS],
 		onlyFiles: true,
 	})
 
@@ -116,28 +62,7 @@ export async function scanFiles(rootPath: string): Promise<ScanResult> {
 	}
 }
 
-/** Directories to skip in buildFileTree (aligned with IGNORE_PATTERNS) */
-const TREE_IGNORE_DIRS = new Set([
-	"node_modules",
-	"dist",
-	"build",
-	"out",
-	".next",
-	".nuxt",
-	".svelte-kit",
-	".astro",
-	".output",
-	".git",
-	".idea",
-	".vscode",
-	"coverage",
-	"__tests__",
-	".storybook",
-	"cypress",
-	"e2e",
-])
-
-async function buildFileTree(rootPath: string, depth = 0, maxDepth = 4): Promise<FileTreeNode[]> {
+async function buildFileTree(rootPath: string, depth = 0, maxDepth = EXTRACTION_LIMITS.fileTreeMaxDepth): Promise<FileTreeNode[]> {
 	if (depth > maxDepth) return []
 
 	const entries = await readdir(rootPath, { withFileTypes: true })

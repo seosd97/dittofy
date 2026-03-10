@@ -1,10 +1,8 @@
 import { readFile, stat } from "node:fs/promises"
 import { basename, extname, join } from "node:path"
+import { EXTRACTION_LIMITS, FILE_CATEGORY_PRIORITY } from "../../constants/extraction.js"
 import type { CodeChunk, FileCategory } from "../../types/extraction.js"
 import { logger } from "../../utils/logger.js"
-
-const MAX_FILE_SIZE = 100 * 1024 // 100KB
-const MAX_FILES = 200
 
 export async function extractCode(rootPath: string, relevantFiles: string[]): Promise<CodeChunk[]> {
 	const chunks: CodeChunk[] = []
@@ -16,10 +14,10 @@ export async function extractCode(rootPath: string, relevantFiles: string[]): Pr
 		return pa - pb
 	})
 
-	const filesToProcess = sorted.slice(0, MAX_FILES)
+	const filesToProcess = sorted.slice(0, EXTRACTION_LIMITS.maxFiles)
 
-	if (sorted.length > MAX_FILES) {
-		logger.warn(`${sorted.length} files found, processing top ${MAX_FILES} by priority`)
+	if (sorted.length > EXTRACTION_LIMITS.maxFiles) {
+		logger.warn(`${sorted.length} files found, processing top ${EXTRACTION_LIMITS.maxFiles} by priority`)
 	}
 
 	for (const filePath of filesToProcess) {
@@ -27,7 +25,7 @@ export async function extractCode(rootPath: string, relevantFiles: string[]): Pr
 
 		try {
 			const fileStat = await stat(fullPath)
-			if (fileStat.size > MAX_FILE_SIZE) {
+			if (fileStat.size > EXTRACTION_LIMITS.maxFileSize) {
 				logger.debug(`Skipping large file: ${filePath} (${(fileStat.size / 1024).toFixed(0)}KB)`)
 				continue
 			}
@@ -36,7 +34,7 @@ export async function extractCode(rootPath: string, relevantFiles: string[]): Pr
 
 			// Skip binary-like or data-heavy SVGs (base64 encoded images, long data URIs)
 			const ext = extname(filePath).toLowerCase()
-			if (ext === ".svg" && (content.includes("base64,") || content.length > 10_000)) {
+			if (ext === ".svg" && (content.includes("base64,") || content.length > EXTRACTION_LIMITS.svgContentThreshold)) {
 				logger.debug(`Skipping data-heavy SVG: ${filePath}`)
 				continue
 			}
@@ -168,23 +166,5 @@ export function categorizeFile(filePath: string): FileCategory {
 }
 
 function getCategoryPriority(category: FileCategory): number {
-	const priorities: Record<FileCategory, number> = {
-		config: 0,
-		component: 1,
-		page: 2,
-		layout: 3,
-		style: 4,
-		hook: 5,
-		context: 6,
-		store: 7,
-		route: 8,
-		type: 9,
-		util: 10,
-		api: 11,
-		asset: 12,
-		public: 13,
-		test: 14,
-		other: 15,
-	}
-	return priorities[category]
+	return FILE_CATEGORY_PRIORITY[category]
 }

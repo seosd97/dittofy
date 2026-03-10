@@ -1,3 +1,4 @@
+import { COMPLEXITY_THRESHOLDS } from "../../../constants/analysis.js"
 import type { PromptStep } from "../../../types/prompts.js"
 
 export function assemblePromptStep(
@@ -50,7 +51,7 @@ ${data.validation}
 
 function estimateComplexity(instructions: string): "low" | "medium" | "high" {
 	const lineCount = instructions.split("\n").length
-	if (lineCount > 40) return "high"
-	if (lineCount > 20) return "medium"
+	if (lineCount > COMPLEXITY_THRESHOLDS.high) return "high"
+	if (lineCount > COMPLEXITY_THRESHOLDS.medium) return "medium"
 	return "low"
 }

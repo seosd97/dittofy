@@ -1,3 +1,4 @@
+import { PROMPT_GEN } from "../../constants/prompt-gen.js"
 import type { AnalysisResult } from "../../types/analysis.js"
 import type { StepPlan, StepPlanEntry } from "../../types/prompts.js"
 import { logger } from "../../utils/logger.js"
@@ -27,7 +28,7 @@ export function planSteps(analysis: AnalysisResult): StepPlan {
 	// Component steps: split into groups of ~5
 	const components = analysis.componentCatalog?.components ?? []
 	if (components.length > 0) {
-		const groupSize = 5
+		const groupSize = PROMPT_GEN.componentsPerStep
 		const groupCount = Math.ceil(components.length / groupSize)
 
 		for (let i = 0; i < groupCount; i++) {
@@ -109,8 +110,7 @@ export function planSteps(analysis: AnalysisResult): StepPlan {
 		)
 	}
 
-	// Enforce max 12 steps, totalSteps matches actual count
-	const limitedSteps = steps.slice(0, 12)
+	const limitedSteps = steps.slice(0, PROMPT_GEN.maxSteps)
 
 	return {
 		totalSteps: limitedSteps.length,

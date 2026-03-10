@@ -1,4 +1,5 @@
 import type { LanguageModel } from "ai"
+import { ANALYSIS } from "../../constants/analysis.js"
 import type { UsageTracker } from "../../llm/usage.js"
 import type {
 	AnalysisResult,
@@ -33,10 +34,10 @@ export async function runAnalysis(
 	const startTime = Date.now()
 	const errors: PhaseError[] = []
 
-	phaseStart("Phase 2", "Running 7 design analyzers (concurrency: 3)")
+	phaseStart("Phase 2", `Running ${ANALYSIS.totalAnalyzers} design analyzers (concurrency: ${ANALYSIS.concurrency})`)
 
-	// Run all 7 analyzers with concurrency limit to avoid rate limiting
-	const withLimit = createConcurrencyLimiter(3)
+	// Run all analyzers with concurrency limit to avoid rate limiting
+	const withLimit = createConcurrencyLimiter(ANALYSIS.concurrency)
 	const lang = outputLanguage
 	const [
 		tokensResult,
@@ -95,7 +96,7 @@ export async function runAnalysis(
 	const failedAnalyzers = allNames.filter((k) => analyzerResults[k] === null)
 	const succeededCount = allNames.length - failedAnalyzers.length
 
-	logger.info(`Phase 2: ${succeededCount}/7 analyzers completed successfully`)
+	logger.info(`Phase 2: ${succeededCount}/${ANALYSIS.totalAnalyzers} analyzers completed successfully`)
 
 	if (succeededCount === 0) {
 		phaseFail("Phase 2", "All analyzers failed")
@@ -106,9 +107,8 @@ export async function runAnalysis(
 		}
 	}
 
-	const MIN_ANALYZERS = 3
-	if (succeededCount < MIN_ANALYZERS) {
-		phaseFail("Phase 2", `Only ${succeededCount}/7 succeeded (minimum: ${MIN_ANALYZERS})`)
+	if (succeededCount < ANALYSIS.minAnalyzersRequired) {
+		phaseFail("Phase 2", `Only ${succeededCount}/${ANALYSIS.totalAnalyzers} succeeded (minimum: ${ANALYSIS.minAnalyzersRequired})`)
 		return {
 			status: "failed",
 			errors,
@@ -137,7 +137,7 @@ export async function runAnalysis(
 		}
 	}
 
-	const status = succeededCount === 7 ? "completed" : "partial"
+	const status = succeededCount === ANALYSIS.totalAnalyzers ? "completed" : "partial"
 	phaseSuccess("Phase 2", `Analysis ${status} in ${Date.now() - startTime}ms`)
 
 	return {

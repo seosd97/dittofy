@@ -1,3 +1,4 @@
+import { CONTEXT_BUDGET, CJK_RANGES, TOKEN_RATIO } from "../constants/token-estimation.js"
 import type { CodeChunk, ConfigFile, FileCategory } from "../types/extraction.js"
 import type { FileTreeNode } from "../types/extraction.js"
 
@@ -37,8 +38,8 @@ const MUST_INCLUDE_PATTERNS: Record<AnalyzerType, RegExp[]> = {
 	interaction: [/motion/, /animation/, /framer/],
 }
 
-const DEFAULT_TOKEN_BUDGET = 30_000
-const MAX_FILES_PER_ANALYZER = 50
+const { defaultTokenBudget: DEFAULT_TOKEN_BUDGET, maxFilesPerAnalyzer: MAX_FILES_PER_ANALYZER } =
+	CONTEXT_BUDGET
 
 export function buildContextForAnalyzer(
 	analyzerType: AnalyzerType,
@@ -50,9 +51,9 @@ export function buildContextForAnalyzer(
 	const priorities = ANALYZER_FILE_PRIORITIES[analyzerType]
 	const mustInclude = MUST_INCLUDE_PATTERNS[analyzerType]
 
-	// Budget allocation: config 20%, code 70%, structure 10%
-	const configBudget = Math.floor(tokenBudget * 0.2)
-	const codeBudget = Math.floor(tokenBudget * 0.7)
+	// Budget allocation: config, code, rest is structure
+	const configBudget = Math.floor(tokenBudget * CONTEXT_BUDGET.configRatio)
+	const codeBudget = Math.floor(tokenBudget * CONTEXT_BUDGET.codeRatio)
 
 	// 1. Build config context (budget-capped)
 	let configTokens = 0
@@ -124,7 +125,7 @@ export function buildContextForAnalyzer(
 	}
 }
 
-const MAX_SUMMARY_TOKENS = 8_000
+const { maxSummaryTokens: MAX_SUMMARY_TOKENS } = CONTEXT_BUDGET
 
 export function buildAnalysisSummary(analysisResults: Record<string, unknown>): string {
 	const full = JSON.stringify(analysisResults, null, 2)
@@ -160,20 +161,13 @@ export function estimateTokens(text: string): number {
 	let cjkCount = 0
 	for (let i = 0; i < text.length; i++) {
 		const code = text.charCodeAt(i)
-		// CJK Unified Ideographs, Hangul Syllables, Katakana/Hiragana ranges
-		if (
-			(code >= 0x4e00 && code <= 0x9fff) ||
-			(code >= 0xac00 && code <= 0xd7af) ||
-			(code >= 0x3040 && code <= 0x30ff) ||
-			(code >= 0x3400 && code <= 0x4dbf) ||
-			(code >= 0xf900 && code <= 0xfaff)
-		) {
+		if (CJK_RANGES.some(([start, end]) => code >= start && code <= end)) {
 			cjkCount++
 		} else {
 			asciiLen++
 		}
 	}
-	return Math.ceil(asciiLen / 4 + cjkCount * 1.5)
+	return Math.ceil(asciiLen / TOKEN_RATIO.asciiCharsPerToken + cjkCount * TOKEN_RATIO.cjkTokensPerChar)
 }
 
 function buildFileStructureSummary(tree: FileTreeNode[], prefix = "", depth = 0): string {
