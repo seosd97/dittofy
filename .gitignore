@@ -35,6 +35,10 @@ coverage/
 tmp/
 .tmp/
 
+# Internal docs
+docs/
+REVIEW-BRIEF.md
+
 # Turbo / Cache
 .turbo/
 .cache/
