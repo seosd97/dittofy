@@ -4,7 +4,7 @@ import type { DittoConfig } from "@defs/config.js"
 import { UserError } from "@defs/errors.js"
 import type { LanguageModel } from "ai"
 
-const ZHIPU_BASE_URL = "https://api.z.ai/api/coding/paas/v4"
+const ZAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4"
 
 export function createModel(config: DittoConfig): LanguageModel {
 	const { provider, model, apiKeys } = config
@@ -30,15 +30,15 @@ export function createModel(config: DittoConfig): LanguageModel {
 			const anthropic = createAnthropic({ apiKey })
 			return anthropic(model)
 		}
-		case "zhipu": {
-			const apiKey = apiKeys.zhipu
+		case "zai": {
+			const apiKey = apiKeys.zai
 			if (!apiKey) {
 				throw new UserError(
-					"Zhipu API key is required. Set ZHIPU_API_KEY environment variable or configure via `ditto config set apiKeys.zhipu <key>`.",
+					"Z.AI API key is required. Set ZAI_API_KEY environment variable or configure via `ditto config set apiKeys.zai <key>`.",
 				)
 			}
-			const zhipu = createOpenAI({ apiKey, baseURL: ZHIPU_BASE_URL })
-			return zhipu.chat(model)
+			const zai = createOpenAI({ apiKey, baseURL: ZAI_BASE_URL })
+			return zai.chat(model)
 		}
 		default:
 			throw new UserError(`Unsupported provider: ${provider}`)

@@ -29,16 +29,16 @@ export async function generateDesignSystemPrompt(
 
 	usage.record("prompt-gen", "design-system-prompt", result.usage)
 
-	return assemblePromptStep(2, "step-02-design-system.md", "Design System", result.data)
+	return assemblePromptStep(2, "step-02-design-system.md", "Design System", [1], result.data)
 }
 
 function buildDesignSystemPromptText(analysis: AnalysisResult, context: string): string {
-	return `Generate an implementation prompt for Step 2: Design System.
+	return `Generate a stack-agnostic implementation prompt for Step 2: Design System.
 
-The AI agent needs to implement the design system including tokens, typography, colors, and base styles.
+The AI agent needs to implement the design system including tokens, typography, colors, and base styles. Describe the token values and design rules abstractly — the agent will apply them using whatever styling solution its project uses. Do NOT generate framework-specific code (no Tailwind config, no CSS-in-JS imports, no createThemeContract, etc.).
 
-## Styling Approach
-${analysis.techStack.styling.value.approach} (tier ${analysis.techStack.styling.value.tier})
+## Original Styling Reference (informational only)
+The source project used ${analysis.techStack.styling.value.approach}. This is provided as context, not a requirement.
 
 ## Design Context
 ${context}
@@ -52,5 +52,5 @@ ${analysis.essence.colorStrategy}
 ## Typography Strategy
 ${analysis.essence.typographyStrategy}
 
-Generate a comprehensive, self-contained prompt that includes ALL design token values inline. The agent must be able to implement the complete design system without any external references.`
+Generate a comprehensive, self-contained prompt that includes ALL design token values as abstract name-value tables (colors, spacing, typography scale, border radii, shadows, breakpoints). Use exact values from the context without alteration. The agent must be able to implement the complete design system in any styling approach.`
 }

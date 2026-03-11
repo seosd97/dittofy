@@ -138,7 +138,7 @@ const docsWithDesign: DocumentSet = {
 
 describe("injectContext", () => {
 	describe("setup context", () => {
-		it("includes tech stack and design essence", () => {
+		it("includes design essence and token categories (stack-agnostic)", () => {
 			const step: StepPlanEntry = {
 				stepNumber: 1,
 				stepType: "setup",
@@ -148,14 +148,15 @@ describe("injectContext", () => {
 			}
 			const ctx = injectContext(step, createAnalysis(), emptyDocSet)
 
-			expect(ctx).toContain("Next.js")
-			expect(ctx).toContain("TypeScript")
-			expect(ctx).toContain("Tailwind CSS")
 			expect(ctx).toContain("Modern SaaS dashboard")
 			expect(ctx).toContain("Minimalist")
+			expect(ctx).toContain("Design Token Categories")
+			expect(ctx).toContain("Colors")
+			expect(ctx).toContain("Spacing")
+			expect(ctx).toContain("Typography")
 		})
 
-		it("includes optional tech stack fields", () => {
+		it("does not include specific tech stack as requirements", () => {
 			const analysis = createAnalysis()
 			analysis.techStack.uiLibrary = { value: "shadcn/ui", confidence: "high" }
 			analysis.techStack.buildTool = { value: "Vite", confidence: "high" }
@@ -168,8 +169,10 @@ describe("injectContext", () => {
 			}
 			const ctx = injectContext(step, analysis, emptyDocSet)
 
-			expect(ctx).toContain("shadcn/ui")
-			expect(ctx).toContain("Vite")
+			// Setup context should be stack-agnostic
+			expect(ctx).not.toContain("Next.js")
+			expect(ctx).not.toContain("shadcn/ui")
+			expect(ctx).not.toContain("Vite")
 		})
 	})
 
@@ -242,6 +245,9 @@ describe("injectContext", () => {
 			expect(ctx).toContain("primary")
 			expect(ctx).toContain("secondary")
 			expect(ctx).not.toContain("Content card")
+			// Stack-agnostic: no framework references
+			expect(ctx).not.toContain("Next.js")
+			expect(ctx).not.toContain("Tailwind CSS")
 		})
 
 		it("returns fallback when no matching components", () => {
@@ -289,6 +295,9 @@ describe("injectContext", () => {
 			expect(ctx).toContain("1200px")
 			expect(ctx).toContain("12 columns")
 			expect(ctx).toContain("sidebar")
+			// Stack-agnostic: no framework references
+			expect(ctx).not.toContain("Next.js")
+			expect(ctx).not.toContain("Tailwind CSS")
 		})
 	})
 

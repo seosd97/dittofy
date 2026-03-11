@@ -9,7 +9,7 @@ export interface PromptStep {
 	filename: string
 	title: string
 	content: string
-	prerequisites: string[]
+	dependencies: number[]
 	estimatedComplexity: "low" | "medium" | "high"
 }
 

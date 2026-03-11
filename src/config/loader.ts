@@ -37,7 +37,7 @@ function resolveApiKeys(config: Record<string, unknown>): Record<string, unknown
 		apiKeys: {
 			openai: apiKeys.openai ?? process.env.OPENAI_API_KEY,
 			anthropic: apiKeys.anthropic ?? process.env.ANTHROPIC_API_KEY,
-			zhipu: apiKeys.zhipu ?? process.env.ZHIPU_API_KEY,
+			zai: apiKeys.zai ?? process.env.ZAI_API_KEY,
 		},
 	}
 }

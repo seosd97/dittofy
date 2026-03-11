@@ -26,18 +26,18 @@ export async function generateInteractionsPrompt(
 		schemaDescription: "Interactions and animations implementation prompt",
 	})
 
-	usage.record("prompt-gen", "interactions-prompt", result.usage)
+	usage.record("prompt-gen", `interactions-prompt-${step.stepNumber}`, result.usage)
 
 	const paddedNum = String(step.stepNumber).padStart(2, "0")
 	const filename = `step-${paddedNum}-interactions.md`
 
-	return assemblePromptStep(step.stepNumber, filename, step.title, result.data)
+	return assemblePromptStep(step.stepNumber, filename, step.title, step.dependencies, result.data)
 }
 
 function buildInteractionsPromptText(step: StepPlanEntry, context: string): string {
-	return `Generate an implementation prompt for Step ${step.stepNumber}: ${step.title}.
+	return `Generate a stack-agnostic implementation prompt for Step ${step.stepNumber}: ${step.title}.
 
-The AI agent needs to implement animations, transitions, hover effects, and gesture-based interactions.
+The AI agent needs to implement animations, transitions, hover effects, and gesture-based interactions. Describe the visual behavior (duration, easing, trigger, what changes) — not framework-specific animation code. The agent will choose appropriate animation tools for its stack.
 
 ## Scope
 ${step.scope}
@@ -48,5 +48,5 @@ This step depends on steps: ${step.dependencies.join(", ")}
 ## Interaction Patterns & Animation Specs
 ${context}
 
-Generate a comprehensive, self-contained prompt with all animation specs, transition values, easing functions, and gesture details inline. The agent must be able to implement all interactions without external references.`
+Generate a comprehensive, self-contained prompt with all animation specs (duration, easing, properties), transition values, and gesture details inline. Describe what the user sees and how elements behave, not which animation library to use.`
 }

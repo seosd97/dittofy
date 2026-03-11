@@ -2,7 +2,7 @@ import type { AspectName } from "@defs/aspect-map.js"
 import type { AspectDescriptor } from "@defs/descriptor.js"
 import { buildContextForAnalyzer } from "@llm/context.js"
 import { callLLM } from "@llm/core/client.js"
-import { buildSystemPrompt } from "@llm/prompts/system.js"
+import { ANALYSIS_PRINCIPLES, buildSystemPrompt } from "@llm/prompts/system.js"
 import type { UsageTracker } from "@llm/usage.js"
 import type { ExtractionOutput } from "@source/index.js"
 import type { LanguageModel } from "ai"
@@ -27,7 +27,14 @@ export async function runAnalyzer<K extends AspectName>(
 		extraction.extraction.fileTree,
 	)
 
-	const systemPrompt = buildSystemPrompt({ ...analyzer.promptConfig, outputLanguage })
+	const systemPrompt = buildSystemPrompt({
+		...analyzer.promptConfig,
+		additionalPrinciples: [
+			...ANALYSIS_PRINCIPLES,
+			...(analyzer.promptConfig.additionalPrinciples ?? []),
+		],
+		outputLanguage,
+	})
 
 	const result = await callLLM({
 		model,

@@ -5,6 +5,7 @@ export function assemblePromptStep(
 	stepNumber: number,
 	filename: string,
 	title: string,
+	dependencies: number[],
 	data: {
 		goal: string
 		prerequisites: string
@@ -15,13 +16,18 @@ export function assemblePromptStep(
 		validation: string
 	},
 ): PromptStep {
+	const prerequisitesText =
+		dependencies.length > 0
+			? `Complete steps ${dependencies.join(", ")} before starting this step.`
+			: "No prerequisites. This is the first step."
+
 	const content = `# Step ${stepNumber}: ${title}
 
 ## Goal
 ${data.goal}
 
 ## Prerequisites
-${data.prerequisites}
+${prerequisitesText}
 
 ## Context
 ${data.context}
@@ -44,7 +50,7 @@ ${data.validation}
 		filename,
 		title,
 		content,
-		prerequisites: data.prerequisites.split("\n").filter((l) => l.trim()),
+		dependencies,
 		estimatedComplexity: estimateComplexity(data.instructions),
 	}
 }

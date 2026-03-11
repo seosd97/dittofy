@@ -29,34 +29,16 @@ export async function generateSetupPrompt(
 
 	usage.record("prompt-gen", "setup-prompt", result.usage)
 
-	return assemblePromptStep(1, "step-01-project-setup.md", "Project Setup", result.data)
+	return assemblePromptStep(1, "step-01-project-setup.md", "Project Setup", [], result.data)
 }
 
-function buildSetupPromptText(analysis: AnalysisResult, context: string): string {
-	const techLines = [
-		`- Framework: ${analysis.techStack.framework.value}`,
-		`- Language: ${analysis.techStack.language.value}`,
-		`- Styling: ${analysis.techStack.styling.value.approach} (tier ${analysis.techStack.styling.value.tier})`,
-	]
-	if (analysis.techStack.uiLibrary) {
-		techLines.push(`- UI Library: ${analysis.techStack.uiLibrary.value}`)
-	}
-	if (analysis.techStack.stateManagement) {
-		techLines.push(`- State Management: ${analysis.techStack.stateManagement.value}`)
-	}
-	if (analysis.techStack.buildTool) {
-		techLines.push(`- Build Tool: ${analysis.techStack.buildTool.value}`)
-	}
+function buildSetupPromptText(_analysis: AnalysisResult, context: string): string {
+	return `Generate a stack-agnostic implementation prompt for Step 1: Project Setup.
 
-	return `Generate an implementation prompt for Step 1: Project Setup.
-
-The AI agent needs to initialize a new project that matches the original design system.
-
-## Tech Stack
-${techLines.join("\n")}
+The AI agent needs to set up a new frontend project that implements the following design system. Do NOT mandate a specific framework, build tool, or styling library. Instead, describe the design system requirements (token structure, folder organization guidelines, design philosophy) so the agent can set up the project with any stack of its choice.
 
 ## Design Context
 ${context}
 
-Generate a comprehensive, self-contained prompt that an AI coding agent can follow to set up the project from scratch. Include all necessary commands, configurations, and file structures.`
+Generate a comprehensive, self-contained prompt that describes the design system to be implemented — token categories (colors, spacing, typography, radii, shadows), folder structure guidelines, and design philosophy. The agent should be able to start a project from scratch with any modern frontend stack.`
 }

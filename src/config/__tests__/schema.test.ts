@@ -81,10 +81,10 @@ describe("configSchema", () => {
 		expect(result.success).toBe(false)
 	})
 
-	it("accepts zhipu provider with zhipu key", () => {
+	it("accepts zai provider with zai key", () => {
 		const result = configSchema.safeParse({
-			provider: "zhipu",
-			apiKeys: { zhipu: "zhipu-test-key" },
+			provider: "zai",
+			apiKeys: { zai: "zai-test-key" },
 		})
 		expect(result.success).toBe(true)
 	})

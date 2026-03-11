@@ -26,26 +26,9 @@ export function injectContext(
 }
 
 function buildSetupContext(analysis: AnalysisResult): string {
-	const { techStack, essence } = analysis
+	const { essence } = analysis
 	const lines: string[] = []
 
-	lines.push("## Tech Stack")
-	lines.push(`- Framework: ${techStack.framework.value} (${techStack.framework.confidence})`)
-	lines.push(`- Language: ${techStack.language.value} (${techStack.language.confidence})`)
-	lines.push(
-		`- Styling: ${techStack.styling.value.approach} (tier ${techStack.styling.value.tier})`,
-	)
-	if (techStack.uiLibrary) {
-		lines.push(`- UI Library: ${techStack.uiLibrary.value}`)
-	}
-	if (techStack.stateManagement) {
-		lines.push(`- State Management: ${techStack.stateManagement.value}`)
-	}
-	if (techStack.buildTool) {
-		lines.push(`- Build Tool: ${techStack.buildTool.value}`)
-	}
-
-	lines.push("")
 	lines.push("## Design Essence")
 	lines.push(essence.summary)
 	lines.push("")
@@ -55,6 +38,18 @@ function buildSetupContext(analysis: AnalysisResult): string {
 	for (const char of essence.keyCharacteristics) {
 		lines.push(`- ${char}`)
 	}
+
+	lines.push("")
+	lines.push("## Design Token Categories")
+	lines.push("The project's design system should include the following token categories:")
+	lines.push(
+		"- Colors: surface/background, text hierarchy, borders, accents, semantic (success/error/warning)",
+	)
+	lines.push("- Spacing: consistent scale (e.g., 4px base unit)")
+	lines.push("- Typography: font families, size scale, weight scale, line heights")
+	lines.push("- Border Radius: size tiers")
+	lines.push("- Shadows: elevation levels")
+	lines.push("- Transitions: duration/easing presets")
 
 	return lines.join("\n")
 }
@@ -125,16 +120,8 @@ function buildDesignSystemContext(analysis: AnalysisResult, documents: DocumentS
 }
 
 function buildComponentContext(step: StepPlanEntry, analysis: AnalysisResult): string {
-	const { componentCatalog, designTokens, techStack } = analysis
+	const { componentCatalog, designTokens } = analysis
 	const lines: string[] = []
-
-	lines.push("## Tech Stack")
-	lines.push(`- Framework: ${techStack.framework.value}`)
-	lines.push(`- Styling: ${techStack.styling.value.approach}`)
-	if (techStack.uiLibrary) {
-		lines.push(`- UI Library: ${techStack.uiLibrary.value}`)
-	}
-	lines.push("")
 
 	const targetNames = step.componentNames ?? []
 	const relevantComponents = (componentCatalog?.components ?? []).filter((c) =>
@@ -180,13 +167,8 @@ function buildComponentContext(step: StepPlanEntry, analysis: AnalysisResult): s
 }
 
 function buildPageContext(analysis: AnalysisResult): string {
-	const { pageStructures, layoutSystem, componentCatalog, techStack } = analysis
+	const { pageStructures, layoutSystem, componentCatalog } = analysis
 	const lines: string[] = []
-
-	lines.push("## Tech Stack")
-	lines.push(`- Framework: ${techStack.framework.value}`)
-	lines.push(`- Styling: ${techStack.styling.value.approach}`)
-	lines.push("")
 
 	lines.push("## Page Structures")
 	for (const page of pageStructures?.pages ?? []) {

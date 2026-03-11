@@ -100,7 +100,7 @@ type CallResult<T> = { object: T; usage: LanguageModelUsage }
 // ── Strategies ──────────────────────────────────────────────
 
 function supportsJsonSchemaMode(provider: LLMProvider): boolean {
-	return provider !== "zhipu"
+	return provider !== "zai"
 }
 
 /**

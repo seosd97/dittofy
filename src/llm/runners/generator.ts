@@ -4,7 +4,7 @@ import type { AspectDescriptor } from "@defs/descriptor.js"
 import type { DocumentEntry } from "@defs/documentation.js"
 import { callLLM } from "@llm/core/client.js"
 import { DOC_GENERATOR_CONFIG } from "@llm/prompts/generators.js"
-import { buildSystemPrompt } from "@llm/prompts/system.js"
+import { ANALYSIS_PRINCIPLES, buildSystemPrompt } from "@llm/prompts/system.js"
 import type { UsageTracker } from "@llm/usage.js"
 import type { LanguageModel } from "ai"
 
@@ -21,7 +21,14 @@ export async function runDocGenerator<K extends AspectName>(
 	language: "ko" | "en" = "ko",
 ): Promise<DocumentEntry> {
 	const { docGenerator } = descriptor
-	const systemPrompt = buildSystemPrompt({ ...DOC_GENERATOR_CONFIG, outputLanguage: language })
+	const systemPrompt = buildSystemPrompt({
+		...DOC_GENERATOR_CONFIG,
+		additionalPrinciples: [
+			...ANALYSIS_PRINCIPLES,
+			...(DOC_GENERATOR_CONFIG.additionalPrinciples ?? []),
+		],
+		outputLanguage: language,
+	})
 	const prompt = docGenerator.buildPrompt(data, essence, language)
 
 	const result = await callLLM({

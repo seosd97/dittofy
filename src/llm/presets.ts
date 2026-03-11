@@ -37,7 +37,7 @@ export interface ProviderProfile {
 export const PROVIDER_PROFILES: Record<LLMProvider, ProviderProfile> = {
 	openai: { tokenMultiplier: 1.0, timeoutMultiplier: 1.0, maxRetries: 3 },
 	anthropic: { tokenMultiplier: 1.0, timeoutMultiplier: 1.0, maxRetries: 3 },
-	zhipu: { tokenMultiplier: 1.5, timeoutMultiplier: 2.0, maxRetries: 2 },
+	zai: { tokenMultiplier: 1.5, timeoutMultiplier: 2.0, maxRetries: 2 },
 }
 
 // ── Resolver ────────────────────────────────────────────────

@@ -5,12 +5,12 @@ export const configSchema = z
 		output: z.string().min(1).default("ditto-output"),
 		language: z.enum(["ko", "en"]).default("ko"),
 		model: z.string().default("gpt-5.2"),
-		provider: z.enum(["openai", "anthropic", "zhipu"]).default("openai"),
+		provider: z.enum(["openai", "anthropic", "zai"]).default("openai"),
 		apiKeys: z
 			.object({
 				openai: z.string().optional(),
 				anthropic: z.string().optional(),
-				zhipu: z.string().optional(),
+				zai: z.string().optional(),
 			})
 			.default({}),
 		docsOnly: z.boolean().default(false),
@@ -31,7 +31,7 @@ function getEnvVarName(provider: string): string {
 	const map: Record<string, string> = {
 		openai: "OPENAI_API_KEY",
 		anthropic: "ANTHROPIC_API_KEY",
-		zhipu: "ZHIPU_API_KEY",
+		zai: "ZAI_API_KEY",
 	}
 	return map[provider] ?? `${provider.toUpperCase()}_API_KEY`
 }

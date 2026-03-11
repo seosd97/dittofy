@@ -11,15 +11,15 @@ describe("resolveCallConfig", () => {
 		expect(result.maxRetries).toBe(3)
 	})
 
-	it("applies zhipu multipliers", () => {
-		const result = resolveCallConfig("tokenAnalyzer", "zhipu")
+	it("applies zai multipliers", () => {
+		const result = resolveCallConfig("tokenAnalyzer", "zai")
 		expect(result.maxOutputTokens).toBe(Math.round(4096 * 1.5)) // 6144
 		expect(result.timeoutMs).toBe(Math.round(120_000 * 2.0)) // 240000
 		expect(result.maxRetries).toBe(2)
 	})
 
-	it("applies zhipu multipliers for heavy presets", () => {
-		const result = resolveCallConfig("docGenerator", "zhipu")
+	it("applies zai multipliers for heavy presets", () => {
+		const result = resolveCallConfig("docGenerator", "zai")
 		expect(result.maxOutputTokens).toBe(Math.round(16384 * 1.5)) // 24576
 		expect(result.timeoutMs).toBe(Math.round(300_000 * 2.0)) // 600000
 	})
@@ -28,7 +28,7 @@ describe("resolveCallConfig", () => {
 		const presetNames = Object.keys(TASK_PRESETS) as PresetName[]
 		for (const preset of presetNames) {
 			const base = TASK_PRESETS[preset]
-			const result = resolveCallConfig(preset, "zhipu")
+			const result = resolveCallConfig(preset, "zai")
 			expect(result.temperature).toBe(base.temperature)
 		}
 	})
@@ -71,6 +71,6 @@ describe("TASK_PRESETS", () => {
 describe("PROVIDER_PROFILES", () => {
 	it("covers all providers", () => {
 		const keys = Object.keys(PROVIDER_PROFILES).sort()
-		expect(keys).toStrictEqual(["anthropic", "openai", "zhipu"])
+		expect(keys).toStrictEqual(["anthropic", "openai", "zai"])
 	})
 })

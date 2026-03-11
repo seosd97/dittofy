@@ -26,18 +26,18 @@ export async function generatePagesPrompt(
 		schemaDescription: "Page implementation prompt",
 	})
 
-	usage.record("prompt-gen", "pages-prompt", result.usage)
+	usage.record("prompt-gen", `pages-prompt-${step.stepNumber}`, result.usage)
 
 	const paddedNum = String(step.stepNumber).padStart(2, "0")
 	const filename = `step-${paddedNum}-page-implementation.md`
 
-	return assemblePromptStep(step.stepNumber, filename, step.title, result.data)
+	return assemblePromptStep(step.stepNumber, filename, step.title, step.dependencies, result.data)
 }
 
 function buildPagesPromptText(step: StepPlanEntry, context: string): string {
-	return `Generate an implementation prompt for Step ${step.stepNumber}: ${step.title}.
+	return `Generate a stack-agnostic implementation prompt for Step ${step.stepNumber}: ${step.title}.
 
-The AI agent needs to implement page layouts, routing, and compose components into complete pages.
+The AI agent needs to implement page layouts, routing, and compose components into complete pages. Describe the page structure, section layout, component placement, and navigation — not framework-specific routing code. The agent will use its project's chosen stack.
 
 ## Scope
 ${step.scope}
@@ -48,5 +48,5 @@ This step depends on steps: ${step.dependencies.join(", ")}
 ## Page Structure & Layout Context
 ${context}
 
-Generate a comprehensive, self-contained prompt that includes page structures, routes, layout details, and component composition. The agent must be able to implement all pages without external references.`
+Generate a comprehensive, self-contained prompt that includes page structures, routes, layout details, and component composition as visual/structural specs. The agent must be able to implement all pages without external references.`
 }

@@ -29,7 +29,7 @@ export const analyzeCommand = defineCommand({
 		provider: {
 			type: "string",
 			alias: "p",
-			description: "LLM provider: openai, anthropic, or zhipu (default: openai)",
+			description: "LLM provider: openai, anthropic, or zai (default: openai)",
 		},
 		language: {
 			type: "string",

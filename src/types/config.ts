@@ -1,4 +1,4 @@
-export type LLMProvider = "openai" | "anthropic" | "zhipu"
+export type LLMProvider = "openai" | "anthropic" | "zai"
 
 export interface DittoConfig {
 	output: string
@@ -8,7 +8,7 @@ export interface DittoConfig {
 	apiKeys: {
 		openai?: string
 		anthropic?: string
-		zhipu?: string
+		zai?: string
 	}
 	docsOnly: boolean
 	promptsOnly: boolean

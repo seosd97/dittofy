@@ -20,7 +20,7 @@ export const configCommand = defineCommand({
 					apiKeys: {
 						openai: config.apiKeys.openai ? "***configured***" : "(not set)",
 						anthropic: config.apiKeys.anthropic ? "***configured***" : "(not set)",
-						zhipu: config.apiKeys.zhipu ? "***configured***" : "(not set)",
+						zai: config.apiKeys.zai ? "***configured***" : "(not set)",
 					},
 					docsOnly: config.docsOnly,
 					promptsOnly: config.promptsOnly,
@@ -54,7 +54,7 @@ export const configCommand = defineCommand({
 				if (!allowedKeys.includes(args.key)) {
 					logger.error(`Unknown config key: "${args.key}". Allowed keys: ${allowedKeys.join(", ")}`)
 					logger.info("For API keys, use environment variables or .env file:")
-					logger.info("  OPENAI_API_KEY, ANTHROPIC_API_KEY, ZHIPU_API_KEY")
+					logger.info("  OPENAI_API_KEY, ANTHROPIC_API_KEY, ZAI_API_KEY")
 					process.exitCode = 1
 					return
 				}

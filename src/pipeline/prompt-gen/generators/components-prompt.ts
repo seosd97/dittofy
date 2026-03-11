@@ -31,13 +31,13 @@ export async function generateComponentsPrompt(
 	const paddedNum = String(step.stepNumber).padStart(2, "0")
 	const filename = `step-${paddedNum}-components.md`
 
-	return assemblePromptStep(step.stepNumber, filename, step.title, result.data)
+	return assemblePromptStep(step.stepNumber, filename, step.title, step.dependencies, result.data)
 }
 
 function buildComponentsPromptText(step: StepPlanEntry, context: string): string {
-	return `Generate an implementation prompt for Step ${step.stepNumber}: ${step.title}.
+	return `Generate a stack-agnostic implementation prompt for Step ${step.stepNumber}: ${step.title}.
 
-The AI agent needs to implement the following components as described in the scope.
+The AI agent needs to implement components matching the following visual specifications. Describe each component by its appearance, dimensions, colors, spacing, typography, variants, and props — not by framework-specific code. The agent will use its project's chosen stack to implement them.
 
 ## Scope
 ${step.scope}
@@ -45,8 +45,8 @@ ${step.scope}
 ## Dependencies
 This step depends on steps: ${step.dependencies.join(", ")}
 
-## Component Specifications & Design Context
+## Component Visual Specifications & Design Context
 ${context}
 
-Generate a comprehensive, self-contained prompt that includes all component specs, prop definitions, variant details, and relevant design tokens inline. The agent must be able to implement each component without external references.`
+Generate a comprehensive, self-contained prompt that includes all component visual specs, prop definitions, variant details, and relevant design token values inline. Describe what each component looks like and how it behaves, not how to code it in a specific framework.`
 }
