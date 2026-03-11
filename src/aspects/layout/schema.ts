@@ -22,7 +22,7 @@ export const navigationPatternSchema = z.object({
 })
 
 export const layoutSystemSchema = z.object({
-	approach: confident(z.string()).describe("Overall layout approach"),
+	approach: confident(z.string()),
 	containers: z.array(layoutContainerSchema),
 	grids: z.array(gridSystemSchema),
 	navigation: z.array(navigationPatternSchema),

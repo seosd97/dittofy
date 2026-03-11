@@ -1,14 +1,6 @@
 import type { DesignEssence, TypographySystem } from "@defs/analysis.js"
-import type { SystemPromptConfig } from "@llm/prompts/system.js"
 
-export const TYPOGRAPHY_ANALYZER_CONFIG: SystemPromptConfig = {
-	role: "You are a typography analyst specializing in analyzing typographic systems in frontend projects.",
-	task: "Analyze the provided source code to extract the complete typography system: font families, type scale (heading/body/caption sizes), line heights, font weights, and letter spacing. Describe the typographic character and hierarchy.",
-	additionalPrinciples: [
-		"Identify the primary and secondary font families and their usage contexts.",
-		"Map the complete type scale from largest heading to smallest caption.",
-	],
-}
+export { TYPOGRAPHY_ANALYZER_CONFIG } from "@llm/prompts/analyzers.js"
 
 export function buildTypographyDocPrompt(
 	data: TypographySystem,

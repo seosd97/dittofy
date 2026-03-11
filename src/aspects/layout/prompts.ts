@@ -1,14 +1,6 @@
 import type { DesignEssence, LayoutSystem } from "@defs/analysis.js"
-import type { SystemPromptConfig } from "@llm/prompts/system.js"
 
-export const LAYOUT_ANALYZER_CONFIG: SystemPromptConfig = {
-	role: "You are a layout system analyst specializing in analyzing spatial organization patterns in frontend projects.",
-	task: "Analyze the provided code to identify the layout system: grid approach (CSS Grid/Flexbox/hybrid), container strategy, spacing rhythm, navigation patterns, and visual hierarchy.",
-	additionalPrinciples: [
-		"Identify recurring layout patterns and their relationships.",
-		"Describe the visual flow and information hierarchy.",
-	],
-}
+export { LAYOUT_ANALYZER_CONFIG } from "@llm/prompts/analyzers.js"
 
 export function buildLayoutDocPrompt(
 	data: LayoutSystem,

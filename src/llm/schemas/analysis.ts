@@ -2,15 +2,15 @@ import { z } from "zod"
 import { confidenceLevelSchema, confident } from "./common.js"
 
 export const colorTokenSchema = z.object({
-	name: z.string().describe("Token name, e.g. 'primary', 'gray-500'"),
-	value: z.string().describe("Color value in hex, rgb, or hsl"),
+	name: z.string(),
+	value: z.string().describe("hex, rgb, or hsl"),
 	usage: z.string().describe("How this color is used in the design"),
 	confidence: confidenceLevelSchema,
 })
 
 export const spacingTokenSchema = z.object({
-	name: z.string().describe("Token name, e.g. 'sm', 'md', 'lg' or '4', '8', '16'"),
-	value: z.string().describe("Spacing value, e.g. '0.5rem', '8px'"),
+	name: z.string(),
+	value: z.string(),
 	usage: z.string().describe("Where this spacing is commonly used"),
 	confidence: confidenceLevelSchema,
 })
@@ -22,28 +22,28 @@ export const tokenValueSchema = z.object({
 })
 
 export const designTokensSchema = z.object({
-	colors: z.array(colorTokenSchema).describe("Color palette tokens"),
-	spacing: z.array(spacingTokenSchema).describe("Spacing scale tokens"),
-	borderRadius: z.array(tokenValueSchema).describe("Border radius tokens"),
-	shadows: z.array(tokenValueSchema).describe("Box shadow tokens"),
-	breakpoints: z.array(tokenValueSchema).describe("Responsive breakpoints"),
-	zIndex: z.array(tokenValueSchema).describe("Z-index scale"),
+	colors: z.array(colorTokenSchema),
+	spacing: z.array(spacingTokenSchema),
+	borderRadius: z.array(tokenValueSchema),
+	shadows: z.array(tokenValueSchema),
+	breakpoints: z.array(tokenValueSchema),
+	zIndex: z.array(tokenValueSchema),
 })
 
 export const typographyScaleSchema = z.object({
-	name: z.string().describe("Scale name, e.g. 'h1', 'body', 'caption'"),
-	fontSize: z.string().describe("Font size value"),
-	lineHeight: z.string().optional().describe("Line height"),
-	fontWeight: z.string().optional().describe("Font weight"),
+	name: z.string(),
+	fontSize: z.string(),
+	lineHeight: z.string().optional(),
+	fontWeight: z.string().optional(),
 	usage: z.string().describe("Where this scale is used"),
 	confidence: confidenceLevelSchema,
 })
 
 export const typographySystemSchema = z.object({
-	fontFamilies: confident(z.array(z.string())).describe("Font families used"),
-	scale: z.array(typographyScaleSchema).describe("Typography scale system"),
-	lineHeights: z.array(tokenValueSchema).describe("Line height tokens"),
-	fontWeights: z.array(tokenValueSchema).describe("Font weight tokens"),
+	fontFamilies: confident(z.array(z.string())),
+	scale: z.array(typographyScaleSchema),
+	lineHeights: z.array(tokenValueSchema),
+	fontWeights: z.array(tokenValueSchema),
 })
 
 export const propInfoSchema = z.object({
@@ -54,12 +54,12 @@ export const propInfoSchema = z.object({
 })
 
 export const componentInfoSchema = z.object({
-	name: z.string().describe("Component name"),
-	filePath: z.string().describe("File path relative to project root"),
-	category: z.enum(["atom", "molecule", "organism", "template"]).describe("Atomic design category"),
-	props: z.array(propInfoSchema).describe("Component props"),
-	variants: z.array(z.string()).describe("Visual variants"),
-	description: z.string().describe("Design description of this component"),
+	name: z.string(),
+	filePath: z.string().describe("Relative to project root"),
+	category: z.enum(["atom", "molecule", "organism", "template"]),
+	props: z.array(propInfoSchema),
+	variants: z.array(z.string()),
+	description: z.string().describe("Visual character and design intent"),
 	confidence: confidenceLevelSchema,
 })
 
@@ -96,7 +96,7 @@ export const navigationPatternSchema = z.object({
 })
 
 export const layoutSystemSchema = z.object({
-	approach: confident(z.string()).describe("Overall layout approach"),
+	approach: confident(z.string()),
 	containers: z.array(layoutContainerSchema),
 	grids: z.array(gridSystemSchema),
 	navigation: z.array(navigationPatternSchema),

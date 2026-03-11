@@ -1,14 +1,6 @@
 import type { DesignEssence, PageStructures } from "@defs/analysis.js"
-import type { SystemPromptConfig } from "@llm/prompts/system.js"
 
-export const PAGE_ANALYZER_CONFIG: SystemPromptConfig = {
-	role: "You are a page structure analyst specializing in analyzing page composition in frontend applications.",
-	task: "Analyze the provided page/route files to map each page's structure: sections (in order), components used per section, layout applied, and visual flow. Identify how sections are visually separated.",
-	additionalPrinciples: [
-		"Focus on section-level composition, not individual component details.",
-		"Identify common page patterns (hero + features + CTA, dashboard layout, etc.).",
-	],
-}
+export { PAGE_ANALYZER_CONFIG } from "@llm/prompts/analyzers.js"
 
 export function buildPagesDocPrompt(
 	data: PageStructures,

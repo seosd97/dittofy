@@ -9,12 +9,12 @@ export const propInfoSchema = z.object({
 })
 
 export const componentInfoSchema = z.object({
-	name: z.string().describe("Component name"),
-	filePath: z.string().describe("File path relative to project root"),
-	category: z.enum(["atom", "molecule", "organism", "template"]).describe("Atomic design category"),
-	props: z.array(propInfoSchema).describe("Component props"),
-	variants: z.array(z.string()).describe("Visual variants"),
-	description: z.string().describe("Design description of this component"),
+	name: z.string(),
+	filePath: z.string().describe("Relative to project root"),
+	category: z.enum(["atom", "molecule", "organism", "template"]),
+	props: z.array(propInfoSchema),
+	variants: z.array(z.string()),
+	description: z.string().describe("Visual character and design intent"),
 	confidence: confidenceLevelSchema,
 })
 

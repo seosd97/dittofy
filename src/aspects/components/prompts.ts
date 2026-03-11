@@ -1,14 +1,6 @@
 import type { ComponentCatalog, DesignEssence } from "@defs/analysis.js"
-import type { SystemPromptConfig } from "@llm/prompts/system.js"
 
-export const COMPONENT_ANALYZER_CONFIG: SystemPromptConfig = {
-	role: "You are a UI component analyst specializing in analyzing component architecture and design patterns in frontend projects.",
-	task: "Analyze the provided components to catalog each one: its atomic design category (atom/molecule/organism/template), props interface, visual variants, states, and design description. Identify component composition patterns.",
-	additionalPrinciples: [
-		"Classify components using atomic design methodology based on their complexity and composition.",
-		"Describe the visual character and design intent of each component, not just its technical structure.",
-	],
-}
+export { COMPONENT_ANALYZER_CONFIG } from "@llm/prompts/analyzers.js"
 
 export function buildComponentsDocPrompt(
 	data: ComponentCatalog,
