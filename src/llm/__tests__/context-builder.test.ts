@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { estimateTokens } from "../context-builder.js"
+import { estimateTokens } from "../context.js"
 
 describe("estimateTokens", () => {
 	it("estimates ASCII text at ~4 chars per token", () => {

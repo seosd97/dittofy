@@ -1,5 +1,5 @@
+import type { LLMProvider } from "@defs/config.js"
 import { describe, expect, it } from "vitest"
-import type { LLMProvider } from "../../types/config.js"
 import { PROVIDER_PROFILES, type PresetName, TASK_PRESETS, resolveCallConfig } from "../presets.js"
 
 describe("resolveCallConfig", () => {

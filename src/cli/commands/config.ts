@@ -42,7 +42,11 @@ export const configCommand = defineCommand({
 		set: defineCommand({
 			meta: { name: "set", description: "Set a configuration value" },
 			args: {
-				key: { type: "positional", description: "Configuration key (e.g., provider, model, language)", required: true },
+				key: {
+					type: "positional",
+					description: "Configuration key (e.g., provider, model, language)",
+					required: true,
+				},
 				value: { type: "positional", description: "Configuration value", required: true },
 			},
 			async run({ args }) {

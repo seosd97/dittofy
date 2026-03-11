@@ -24,7 +24,9 @@ export async function loadDittoConfig(
 			const details = issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n")
 			throw new UserError(`Invalid configuration:\n${details}`)
 		}
-		throw new UserError(`Invalid configuration: ${error instanceof Error ? error.message : String(error)}`)
+		throw new UserError(
+			`Invalid configuration: ${error instanceof Error ? error.message : String(error)}`,
+		)
 	}
 }
 

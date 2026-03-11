@@ -1,6 +1,6 @@
 import { access } from "node:fs/promises"
 import { resolve } from "node:path"
-import type { HealthCheck, HealthCheckResult } from "../types/pipeline.js"
+import type { HealthCheck, HealthCheckResult } from "@defs/pipeline.js"
 
 export async function runHealthCheck(repoPath: string): Promise<HealthCheckResult> {
 	const checks: HealthCheck[] = []

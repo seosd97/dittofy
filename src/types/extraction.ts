@@ -51,5 +51,15 @@ export interface ConfigFile {
 	name: string
 	filePath: string
 	content: string
-	type: "tailwind" | "postcss" | "tsconfig" | "package" | "vite" | "next" | "svelte" | "astro" | "nuxt" | "other"
+	type:
+		| "tailwind"
+		| "postcss"
+		| "tsconfig"
+		| "package"
+		| "vite"
+		| "next"
+		| "svelte"
+		| "astro"
+		| "nuxt"
+		| "other"
 }

@@ -13,7 +13,18 @@
 		"declarationMap": true,
 		"sourceMap": true,
 		"outDir": "dist",
-		"rootDir": "src"
+		"rootDir": "src",
+		"paths": {
+			"@aspects/*": ["./src/aspects/*"],
+			"@llm/*": ["./src/llm/*"],
+			"@source/*": ["./src/source/*"],
+			"@output/*": ["./src/output/*"],
+			"@pipeline/*": ["./src/pipeline/*"],
+			"@cli/*": ["./src/cli/*"],
+			"@config/*": ["./src/config/*"],
+			"@defs/*": ["./src/types/*"],
+			"@utils/*": ["./src/utils/*"]
+		}
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules", "dist"]

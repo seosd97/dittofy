@@ -1,20 +1,25 @@
 import { resolve } from "node:path"
-import { setLLMProvider } from "../llm/client.js"
-import { createModel } from "../llm/provider.js"
-import { UsageTracker } from "../llm/usage.js"
-import { runAnalysis } from "../phases/analysis/index.js"
-import { runDocumentation } from "../phases/documentation/index.js"
-import { type ExtractionOutput, runExtraction } from "../phases/extraction/index.js"
-import { resolveRepo } from "../phases/extraction/repo-resolver.js"
-import { runPromptGeneration } from "../phases/prompt-gen/index.js"
-import type { AnalysisResult } from "../types/analysis.js"
-import type { DittoConfig } from "../types/config.js"
-import type { DocumentSet } from "../types/documentation.js"
-import { UserError } from "../types/errors.js"
-import type { PhaseError } from "../types/pipeline.js"
-import { ensureDir, writeFileContent } from "../utils/fs.js"
-import { logger, phaseFail, phaseStart, phaseSuccess } from "../utils/logger.js"
+import { ASPECT_NAMES, ASPECT_REGISTRY } from "@aspects/registry.js"
+import type { AnalysisResult } from "@defs/analysis.js"
+import type { AnalysisResultMap, AspectName } from "@defs/aspect-map.js"
+import type { DittoConfig } from "@defs/config.js"
+import type { AspectDescriptor } from "@defs/descriptor.js"
+import type { DocumentEntry, DocumentSet } from "@defs/documentation.js"
+import { UserError } from "@defs/errors.js"
+import type { PhaseError } from "@defs/pipeline.js"
+import { setLLMProvider } from "@llm/core/client.js"
+import { createModel } from "@llm/core/provider.js"
+import { runAnalyzer } from "@llm/runners/analyzer.js"
+import { runDocGenerator } from "@llm/runners/generator.js"
+import { UsageTracker } from "@llm/usage.js"
+import { writeDocuments } from "@output/docs.js"
+import { writePrompts } from "@output/prompts.js"
+import { type ExtractionOutput, runExtraction } from "@source/index.js"
+import { resolveRepo } from "@source/repo-resolver.js"
+import { ensureDir, writeFileContent } from "@utils/fs.js"
+import { logger, phaseFail, phaseStart, phaseSuccess } from "@utils/logger.js"
 import { createPipelineContext } from "./context.js"
+import { synthesizeEssence } from "./essence.js"
 import { runHealthCheck } from "./health-check.js"
 
 export interface PipelineResult {
@@ -30,12 +35,14 @@ export interface PipelineResult {
 	}
 }
 
+const ANALYSIS_CONCURRENCY = 3
+const MIN_ANALYZERS_REQUIRED = 3
+
 export async function runPipeline(source: string, config: DittoConfig): Promise<PipelineResult> {
 	const startTime = Date.now()
 	const errors: PhaseError[] = []
 	const usage = new UsageTracker()
 
-	// Resolve repo path
 	const resolved = await resolveRepo(source)
 	const ctx = createPipelineContext(source, resolved.localPath, config)
 
@@ -59,7 +66,7 @@ export async function runPipeline(source: string, config: DittoConfig): Promise<
 		}
 		phaseSuccess("Health Check", "Passed")
 
-		// Phase 1: Extraction (no LLM)
+		// Phase 1: Extraction
 		phaseStart("Phase 1", "Extracting repository data...")
 		let extractionOutput: ExtractionOutput | undefined
 		try {
@@ -89,43 +96,61 @@ export async function runPipeline(source: string, config: DittoConfig): Promise<
 			}
 		}
 
-		// Create LLM model (needed for Phase 2-4)
+		// extractionOutput is guaranteed non-null after the guard above
+		const extraction = extractionOutput
+
+		// Create LLM model
 		setLLMProvider(config.provider)
 		const model = createModel(config)
 
-		// Phase 2: Analysis (LLM) — always runs (both docs and prompts need it)
-		let analysisResult: AnalysisResult | undefined
-		phaseStart("Phase 2", "Analyzing design patterns...")
-		try {
-			const phase2Result = await runAnalysis(extractionOutput, model, usage, config.language)
-			analysisResult = phase2Result.data
+		// Phase 2: Analysis — registry-driven
+		phaseStart(
+			"Phase 2",
+			`Running ${ASPECT_NAMES.length} design analyzers (concurrency: ${ANALYSIS_CONCURRENCY})`,
+		)
 
-			if (phase2Result.errors.length > 0) {
-				errors.push(...phase2Result.errors)
-			}
-
-			if (phase2Result.status === "failed") {
-				phaseFail("Phase 2", "Analysis failed")
-			} else {
-				phaseSuccess("Phase 2", `Analysis ${phase2Result.status}`)
-			}
-
-			// Save analysis.json
-			if (analysisResult) {
-				const analysisDir = resolve(ctx.outputDir)
-				await ensureDir(analysisDir)
-				await writeFileContent(
-					resolve(analysisDir, "analysis.json"),
-					JSON.stringify(analysisResult, null, 2),
-				)
-			}
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error)
-			phaseFail("Phase 2", `Analysis failed: ${message}`)
-			errors.push({ phase: "Phase 2", message, cause: error })
+		const withLimit = createConcurrencyLimiter(ANALYSIS_CONCURRENCY)
+		const analysisResults: AnalysisResultMap = {
+			designTokens: null,
+			typography: null,
+			componentCatalog: null,
+			layoutSystem: null,
+			pageStructures: null,
+			responsiveStrategy: null,
+			interactionPatterns: null,
 		}
+		const failedAnalyzers: string[] = []
 
-		if (!analysisResult) {
+		const analyzerPromises = ASPECT_NAMES.map((name) => {
+			const descriptor = ASPECT_REGISTRY[name]
+			return withLimit(async () => {
+				try {
+					const result = await runAnalyzer(
+						descriptor as AspectDescriptor<typeof name>,
+						extraction,
+						model,
+						usage,
+						config.language === "ko" ? "ko" : "en",
+					)
+					;(analysisResults as Record<string, unknown>)[name] = result
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error)
+					errors.push({ phase: descriptor.displayName, message, cause: error })
+					logger.warn(`${descriptor.displayName} failed: ${message}`)
+					failedAnalyzers.push(name)
+				}
+			})
+		})
+
+		await Promise.allSettled(analyzerPromises)
+
+		const succeededCount = ASPECT_NAMES.length - failedAnalyzers.length
+		logger.info(
+			`Phase 2: ${succeededCount}/${ASPECT_NAMES.length} analyzers completed successfully`,
+		)
+
+		if (succeededCount === 0) {
+			phaseFail("Phase 2", "All analyzers failed")
 			return {
 				success: false,
 				outputDir: ctx.outputDir,
@@ -135,40 +160,111 @@ export async function runPipeline(source: string, config: DittoConfig): Promise<
 			}
 		}
 
-		// Phase 3: Documentation (LLM)
-		let documentSet: DocumentSet | undefined
-		if (!config.promptsOnly) {
-			const docOutputDir = resolve(ctx.outputDir, "design-spec")
-			try {
-				const phase3Result = await runDocumentation(
-					analysisResult,
-					model,
-					usage,
-					docOutputDir,
-					config.language,
-				)
-				documentSet = phase3Result.data
-
-				if (phase3Result.errors.length > 0) {
-					errors.push(...phase3Result.errors)
-				}
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error)
-				phaseFail("Phase 3", `Documentation failed: ${message}`)
-				errors.push({ phase: "Phase 3", message, cause: error })
+		if (succeededCount < MIN_ANALYZERS_REQUIRED) {
+			phaseFail(
+				"Phase 2",
+				`Only ${succeededCount}/${ASPECT_NAMES.length} succeeded (minimum: ${MIN_ANALYZERS_REQUIRED})`,
+			)
+			return {
+				success: false,
+				outputDir: ctx.outputDir,
+				duration: Date.now() - startTime,
+				errors,
+				usage: usage.getSummary(),
 			}
 		}
 
-		// Phase 4: Prompt Generation (LLM)
-		if (!config.docsOnly) {
-			if (!documentSet && !config.promptsOnly) {
-				logger.warn(
-					"Phase 3 (Documentation) failed — prompts will be generated without design spec context",
-				)
+		// Essence synthesis
+		phaseStart("Phase 2", "Synthesizing design essence")
+		let essence: AnalysisResult["essence"] | undefined
+		try {
+			essence = await synthesizeEssence(
+				analysisResults,
+				model,
+				usage,
+				config.language === "ko" ? "ko" : "en",
+			)
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error)
+			errors.push({ phase: "Essence Synthesizer", message })
+			logger.warn(`Essence Synthesizer failed: ${message}`)
+		}
+
+		if (!essence) {
+			phaseFail("Phase 2", "Essence synthesis failed")
+			return {
+				success: false,
+				outputDir: ctx.outputDir,
+				duration: Date.now() - startTime,
+				errors,
+				usage: usage.getSummary(),
 			}
-			const promptOutputDir = resolve(ctx.outputDir, "prompts")
-			const docSet = documentSet ?? { documents: [], outputDir: "" }
+		}
+
+		const analysisResult: AnalysisResult = {
+			techStack: extraction.techStack,
+			...analysisResults,
+			essence,
+			failedAnalyzers,
+		}
+
+		phaseSuccess("Phase 2", "Analysis complete")
+
+		// Save analysis.json
+		const analysisDir = resolve(ctx.outputDir)
+		await ensureDir(analysisDir)
+		await writeFileContent(
+			resolve(analysisDir, "analysis.json"),
+			JSON.stringify(analysisResult, null, 2),
+		)
+
+		// Phase 3: Documentation — registry-driven
+		let documentSet: DocumentSet | undefined
+		if (!config.promptsOnly) {
+			phaseStart("Phase 3", "Generating documentation")
+			const docOutputDir = resolve(ctx.outputDir, "design-spec")
+			const documents: DocumentEntry[] = []
+
+			for (const name of ASPECT_NAMES) {
+				const descriptor = ASPECT_REGISTRY[name]
+				const data = analysisResults[name]
+				if (!data) continue
+				if (!descriptor.docGenerator.canGenerate(data as never)) continue
+
+				try {
+					const doc = await runDocGenerator(
+						descriptor as AspectDescriptor<typeof name>,
+						data as never,
+						essence,
+						model,
+						usage,
+						config.language,
+					)
+					documents.push(doc)
+					logger.debug(`Generated: ${doc.filename}`)
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error)
+					errors.push({ phase: `${descriptor.displayName} Doc`, message, cause: error })
+					logger.warn(`Failed to generate ${descriptor.displayName} doc: ${message}`)
+				}
+			}
+
+			documentSet = { documents, outputDir: docOutputDir }
+			await writeDocuments(documentSet)
+
+			if (documents.length === 0) {
+				phaseFail("Phase 3", "All document generators failed")
+			} else {
+				phaseSuccess("Phase 3", `Generated ${documents.length} documents`)
+			}
+		}
+
+		// Phase 4: Prompt Generation
+		if (!config.docsOnly) {
 			try {
+				const { runPromptGeneration } = await import("./prompt-gen/index.js")
+				const promptOutputDir = resolve(ctx.outputDir, "prompts")
+				const docSet = documentSet ?? { documents: [], outputDir: "" }
 				const phase4Result = await runPromptGeneration(
 					analysisResult,
 					docSet,
@@ -188,7 +284,7 @@ export async function runPipeline(source: string, config: DittoConfig): Promise<
 		}
 
 		return {
-			success: errors.length === 0,
+			success: errors.filter((e) => !e.phase.includes("failed")).length === 0,
 			outputDir: ctx.outputDir,
 			duration: Date.now() - startTime,
 			errors,
@@ -196,5 +292,32 @@ export async function runPipeline(source: string, config: DittoConfig): Promise<
 		}
 	} finally {
 		await resolved.cleanup()
+	}
+}
+
+function createConcurrencyLimiter(limit: number) {
+	let active = 0
+	const queue: (() => void)[] = []
+
+	function release() {
+		active--
+		if (queue.length > 0) {
+			active++
+			const next = queue.shift()
+			if (next) next()
+		}
+	}
+
+	return async <T>(fn: () => Promise<T>): Promise<T> => {
+		if (active >= limit) {
+			await new Promise<void>((resolve) => queue.push(resolve))
+		} else {
+			active++
+		}
+		try {
+			return await fn()
+		} finally {
+			release()
+		}
 	}
 }

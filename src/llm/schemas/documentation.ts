@@ -13,7 +13,10 @@ export const overviewDocSchema = z.object({
 })
 
 export const tokensDocSchema = z.object({
-	colorPalette: z.string().default("").describe("Color palette section with tables and descriptions"),
+	colorPalette: z
+		.string()
+		.default("")
+		.describe("Color palette section with tables and descriptions"),
 	spacing: z.string().default("").describe("Spacing scale section"),
 	borderRadius: z.string().default("").describe("Border radius section"),
 	shadows: z.string().default("").describe("Shadow scale section"),
@@ -28,7 +31,10 @@ export const typographyDocSchema = z.object({
 
 export const componentsDocSchema = z.object({
 	overview: z.string().default("").describe("Component catalog overview"),
-	componentList: z.string().default("").describe("Detailed component list with variants and design notes"),
+	componentList: z
+		.string()
+		.default("")
+		.describe("Detailed component list with variants and design notes"),
 	patterns: z.string().default("").describe("Component composition patterns"),
 })
 

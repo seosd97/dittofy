@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { tryExtractJSON } from "../client.js"
+import { tryExtractJSON } from "../core/client.js"
 
 const testSchema = z.object({ name: z.string(), value: z.number() })
 

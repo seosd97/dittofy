@@ -1,4 +1,12 @@
-export { callLLM, setLLMProvider, type LLMCallOptions, type LLMCallResult } from "./client.js"
+export {
+	callLLM,
+	setLLMProvider,
+	tryExtractJSON,
+	type LLMCallOptions,
+	type LLMCallResult,
+} from "./core/client.js"
+export { createModel } from "./core/provider.js"
+export { withRetry, type RetryConfig } from "./core/retry.js"
 export {
 	PROVIDER_PROFILES,
 	TASK_PRESETS,
@@ -8,6 +16,4 @@ export {
 	type ResolvedCallConfig,
 	type TaskPreset,
 } from "./presets.js"
-export { createModel } from "./provider.js"
-export { withRetry, type RetryConfig } from "./retry.js"
 export { UsageTracker } from "./usage.js"

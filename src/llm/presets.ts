@@ -1,4 +1,4 @@
-import type { LLMProvider } from "../types/config.js"
+import type { LLMProvider } from "@defs/config.js"
 
 // ── Task Presets ────────────────────────────────────────────
 

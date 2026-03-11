@@ -1,5 +1,5 @@
+import { logger } from "@utils/logger.js"
 import type { LanguageModelUsage } from "ai"
-import { logger } from "../utils/logger.js"
 
 export interface UsageRecord {
 	phase: string
