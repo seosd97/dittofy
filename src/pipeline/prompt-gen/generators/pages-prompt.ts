@@ -5,16 +5,19 @@ import { buildSystemPrompt } from "@llm/prompts/system.js"
 import { promptStepSchema } from "@llm/schemas/prompts.js"
 import type { UsageTracker } from "@llm/usage.js"
 import type { LanguageModel } from "ai"
+import type { EnvironmentProfile } from "../resolve-environment.js"
+import { buildEnvironmentSection } from "../resolve-environment.js"
 import { assemblePromptStep } from "./utils.js"
 
 export async function generateShowcasePagesPrompt(
 	step: StepPlanEntry,
 	context: string,
+	env: EnvironmentProfile,
 	model: LanguageModel,
 	usage: UsageTracker,
 ): Promise<PromptStep> {
 	const system = buildSystemPrompt(PROMPT_GENERATOR_CONFIG)
-	const prompt = buildShowcasePagesPromptText(step, context)
+	const prompt = buildShowcasePagesPromptText(step, context, env)
 
 	const result = await callLLM({
 		model,
@@ -34,10 +37,16 @@ export async function generateShowcasePagesPrompt(
 	return assemblePromptStep(step.stepNumber, filename, step.title, step.dependencies, result.data)
 }
 
-function buildShowcasePagesPromptText(step: StepPlanEntry, context: string): string {
-	return `Generate a stack-agnostic implementation prompt for Step ${step.stepNumber}: ${step.title}.
+function buildShowcasePagesPromptText(
+	step: StepPlanEntry,
+	context: string,
+	env: EnvironmentProfile,
+): string {
+	return `Generate an implementation prompt for Step ${step.stepNumber}: ${step.title}.
 
 IMPORTANT: This is NOT about replicating the source project's pages. The AI agent needs to create two NEW showcase pages — Home and About — that DEMONSTRATE the extracted design system in action.
+
+${buildEnvironmentSection(env)}
 
 ## Purpose
 These pages serve as a living showcase of the design system. They should:

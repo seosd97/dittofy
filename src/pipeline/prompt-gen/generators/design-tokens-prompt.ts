@@ -6,18 +6,21 @@ import { buildSystemPrompt } from "@llm/prompts/system.js"
 import { promptStepSchema } from "@llm/schemas/prompts.js"
 import type { UsageTracker } from "@llm/usage.js"
 import type { LanguageModel } from "ai"
+import type { EnvironmentProfile } from "../resolve-environment.js"
+import { buildEnvironmentSection } from "../resolve-environment.js"
 import { assemblePromptStep } from "./utils.js"
 
 export async function generateDesignTokensPrompt(
 	analysis: AnalysisResult,
 	context: string,
+	env: EnvironmentProfile,
 	model: LanguageModel,
 	usage: UsageTracker,
 	stepNumber: number,
 	dependencies: number[],
 ): Promise<PromptStep> {
 	const system = buildSystemPrompt(PROMPT_GENERATOR_CONFIG)
-	const prompt = buildDesignTokensPromptText(analysis, context)
+	const prompt = buildDesignTokensPromptText(analysis, context, env)
 
 	const result = await callLLM({
 		model,
@@ -41,14 +44,20 @@ export async function generateDesignTokensPrompt(
 	)
 }
 
-function buildDesignTokensPromptText(analysis: AnalysisResult, context: string): string {
+function buildDesignTokensPromptText(
+	analysis: AnalysisResult,
+	context: string,
+	env: EnvironmentProfile,
+): string {
 	const { essence } = analysis
-	return `Generate a stack-agnostic implementation prompt for Design Tokens.
+	return `Generate an implementation prompt for Design Tokens.
 
-The AI agent needs to define all design tokens — the foundational visual values of the design system. This includes colors, spacing, border radius, shadows, z-index, and global base styles. Do NOT include typography (that is a separate step). Describe values abstractly — the agent will implement them using its chosen styling approach.
+The AI agent needs to define all design tokens — the foundational visual values of the design system. This includes colors, spacing, border radius, shadows, z-index, and global base styles. Do NOT include typography (that is a separate step).
 
-## Original Styling Reference (informational only)
-The source project used ${analysis.techStack.styling.value.approach}. This is provided as context, not a requirement.
+${buildEnvironmentSection(env)}
+
+## Token Implementation Approach
+${env.tokenStrategy}
 
 ## Design Essence
 ${essence.summary}

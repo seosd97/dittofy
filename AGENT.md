@@ -23,6 +23,14 @@ Ditto extracts **design essence for mass production**, NOT 1:1 source replicatio
 | `responsive` | responsive aspect | Breakpoints and adaptive patterns for showcase pages |
 | `interactions` | interactions aspect | Animations, transitions, micro-interactions |
 
+### Environment-Aware Prompt Generation
+
+Before prompt generation, `resolveEnvironment(techStack)` produces an `EnvironmentProfile` that all generators share:
+
+- **`existing-project`** mode: detected framework/styling/language → prompts use stack-specific conventions (e.g., "add tokens to tailwind.config", "use Next.js app router layout")
+- **`greenfield`** mode: framework unknown → prompts remain stack-agnostic
+- `tokenStrategy` field tells generators how to describe token storage (CSS variables, Tailwind config, theme object, etc.)
+
 ## Tech Stack
 
 - **Runtime**: Node.js ≥ 20, TypeScript 5.7+, ESM-only

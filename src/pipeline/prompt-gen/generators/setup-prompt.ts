@@ -6,16 +6,22 @@ import { buildSystemPrompt } from "@llm/prompts/system.js"
 import { promptStepSchema } from "@llm/schemas/prompts.js"
 import type { UsageTracker } from "@llm/usage.js"
 import type { LanguageModel } from "ai"
+import type { EnvironmentProfile } from "../resolve-environment.js"
+import { buildEnvironmentSection } from "../resolve-environment.js"
 import { assemblePromptStep } from "./utils.js"
 
 export async function generateSetupPrompt(
 	analysis: AnalysisResult,
 	context: string,
+	env: EnvironmentProfile,
 	model: LanguageModel,
 	usage: UsageTracker,
 ): Promise<PromptStep> {
 	const system = buildSystemPrompt(PROMPT_GENERATOR_CONFIG)
-	const prompt = buildSetupPromptText(analysis, context)
+	const prompt =
+		env.mode === "existing-project"
+			? buildExistingProjectPrompt(analysis, context, env)
+			: buildGreenfieldPrompt(analysis, context, env)
 
 	const result = await callLLM({
 		model,
@@ -32,10 +38,45 @@ export async function generateSetupPrompt(
 	return assemblePromptStep(1, "step-01-project-setup.md", "Project Setup", [], result.data)
 }
 
-function buildSetupPromptText(_analysis: AnalysisResult, context: string): string {
+function buildExistingProjectPrompt(
+	analysis: AnalysisResult,
+	context: string,
+	env: EnvironmentProfile,
+): string {
+	return `Generate an implementation prompt for Step 1: Project Setup — integrating a design system into an EXISTING ${env.framework} project.
+
+The working directory already has a ${env.framework} + ${env.styling} + ${env.language} project. The AI agent should NOT create a new project or install a different framework. Instead, it should set up the design system infrastructure within the existing environment.
+
+${buildEnvironmentSection(env)}
+
+## What the Agent Should Do
+1. **Design token infrastructure** — ${env.tokenStrategy}
+2. **Global styles** — Set up base styles (CSS reset, body defaults, selection styles) using ${env.styling} conventions
+3. **Folder structure** — Add design system folders that fit the existing project structure (e.g., tokens/, styles/, or whatever convention the project uses)
+4. **Configuration updates** — Update ${env.styling} configuration if needed (e.g., extend Tailwind theme, add SCSS variables file)
+${env.uiLibrary ? `5. **UI Library integration** — Align design tokens with ${env.uiLibrary} theming API` : ""}
+
+## What the Agent Should NOT Do
+- Create a new project or run project scaffolding commands
+- Install a different framework, build tool, or styling library
+- Restructure existing project files unrelated to the design system
+
+## Design Context
+${context}
+
+Generate a comprehensive, self-contained prompt that describes exactly how to integrate the design system into this ${env.framework} project.`
+}
+
+function buildGreenfieldPrompt(
+	_analysis: AnalysisResult,
+	context: string,
+	env: EnvironmentProfile,
+): string {
 	return `Generate a stack-agnostic implementation prompt for Step 1: Project Setup.
 
 The AI agent needs to set up a new frontend project that implements the following design system. Do NOT mandate a specific framework, build tool, or styling library. Instead, describe the design system requirements (token structure, folder organization guidelines, design philosophy) so the agent can set up the project with any stack of its choice.
+
+${buildEnvironmentSection(env)}
 
 ## Design Context
 ${context}

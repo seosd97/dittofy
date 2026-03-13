@@ -5,16 +5,19 @@ import { buildSystemPrompt } from "@llm/prompts/system.js"
 import { promptStepSchema } from "@llm/schemas/prompts.js"
 import type { UsageTracker } from "@llm/usage.js"
 import type { LanguageModel } from "ai"
+import type { EnvironmentProfile } from "../resolve-environment.js"
+import { buildEnvironmentSection } from "../resolve-environment.js"
 import { assemblePromptStep } from "./utils.js"
 
 export async function generateLayoutShellPrompt(
 	step: StepPlanEntry,
 	context: string,
+	env: EnvironmentProfile,
 	model: LanguageModel,
 	usage: UsageTracker,
 ): Promise<PromptStep> {
 	const system = buildSystemPrompt(PROMPT_GENERATOR_CONFIG)
-	const prompt = buildLayoutShellPromptText(step, context)
+	const prompt = buildLayoutShellPromptText(step, context, env)
 
 	const result = await callLLM({
 		model,
@@ -34,10 +37,16 @@ export async function generateLayoutShellPrompt(
 	return assemblePromptStep(step.stepNumber, filename, step.title, step.dependencies, result.data)
 }
 
-function buildLayoutShellPromptText(step: StepPlanEntry, context: string): string {
-	return `Generate a stack-agnostic implementation prompt for Step ${step.stepNumber}: ${step.title}.
+function buildLayoutShellPromptText(
+	step: StepPlanEntry,
+	context: string,
+	env: EnvironmentProfile,
+): string {
+	return `Generate an implementation prompt for Step ${step.stepNumber}: ${step.title}.
 
 The AI agent needs to build the structural layout shell — the skeleton that pages will be placed into. This includes the page container strategy, grid system primitives, navigation structure, and header/footer areas. This is NOT about page content; it's about the structural bones that all pages share.
+
+${buildEnvironmentSection(env)}
 
 ## What to Build
 - **Page container**: Max-width, padding, centering strategy
@@ -60,5 +69,5 @@ This step depends on steps: ${step.dependencies.join(", ")}
 ## Layout System Context
 ${context}
 
-Generate a comprehensive, self-contained prompt with all layout dimensions, grid specs, container values, and structural patterns inline. Use the design tokens defined in previous steps for spacing/colors. Describe the visual structure — not framework-specific layout code.`
+Generate a comprehensive, self-contained prompt with all layout dimensions, grid specs, container values, and structural patterns inline. Use the design tokens defined in previous steps for spacing/colors.`
 }

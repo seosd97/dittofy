@@ -5,16 +5,19 @@ import { buildSystemPrompt } from "@llm/prompts/system.js"
 import { promptStepSchema } from "@llm/schemas/prompts.js"
 import type { UsageTracker } from "@llm/usage.js"
 import type { LanguageModel } from "ai"
+import type { EnvironmentProfile } from "../resolve-environment.js"
+import { buildEnvironmentSection } from "../resolve-environment.js"
 import { assemblePromptStep } from "./utils.js"
 
 export async function generateResponsivePrompt(
 	step: StepPlanEntry,
 	context: string,
+	env: EnvironmentProfile,
 	model: LanguageModel,
 	usage: UsageTracker,
 ): Promise<PromptStep> {
 	const system = buildSystemPrompt(PROMPT_GENERATOR_CONFIG)
-	const prompt = buildResponsivePromptText(step, context)
+	const prompt = buildResponsivePromptText(step, context, env)
 
 	const result = await callLLM({
 		model,
@@ -34,10 +37,16 @@ export async function generateResponsivePrompt(
 	return assemblePromptStep(step.stepNumber, filename, step.title, step.dependencies, result.data)
 }
 
-function buildResponsivePromptText(step: StepPlanEntry, context: string): string {
-	return `Generate a stack-agnostic implementation prompt for Step ${step.stepNumber}: ${step.title}.
+function buildResponsivePromptText(
+	step: StepPlanEntry,
+	context: string,
+	env: EnvironmentProfile,
+): string {
+	return `Generate an implementation prompt for Step ${step.stepNumber}: ${step.title}.
 
-The AI agent needs to make the showcase pages (Home, About) and the design system responsive. Describe breakpoint values, what changes at each breakpoint, and layout adaptation rules — not framework-specific responsive syntax (no Tailwind md: classes, no specific media query libraries). The agent will apply these rules using its project's chosen approach.
+The AI agent needs to make the showcase pages (Home, About) and the design system responsive. Describe breakpoint values, what changes at each breakpoint, and layout adaptation rules.
+
+${buildEnvironmentSection(env)}
 
 ## Target
 Apply responsive behavior to:

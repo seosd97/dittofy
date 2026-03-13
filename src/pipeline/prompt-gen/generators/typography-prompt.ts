@@ -6,18 +6,21 @@ import { buildSystemPrompt } from "@llm/prompts/system.js"
 import { promptStepSchema } from "@llm/schemas/prompts.js"
 import type { UsageTracker } from "@llm/usage.js"
 import type { LanguageModel } from "ai"
+import type { EnvironmentProfile } from "../resolve-environment.js"
+import { buildEnvironmentSection } from "../resolve-environment.js"
 import { assemblePromptStep } from "./utils.js"
 
 export async function generateTypographyPrompt(
 	analysis: AnalysisResult,
 	context: string,
+	env: EnvironmentProfile,
 	model: LanguageModel,
 	usage: UsageTracker,
 	stepNumber: number,
 	dependencies: number[],
 ): Promise<PromptStep> {
 	const system = buildSystemPrompt(PROMPT_GENERATOR_CONFIG)
-	const prompt = buildTypographyPromptText(analysis, context)
+	const prompt = buildTypographyPromptText(analysis, context, env)
 
 	const result = await callLLM({
 		model,
@@ -41,11 +44,17 @@ export async function generateTypographyPrompt(
 	)
 }
 
-function buildTypographyPromptText(analysis: AnalysisResult, context: string): string {
+function buildTypographyPromptText(
+	analysis: AnalysisResult,
+	context: string,
+	env: EnvironmentProfile,
+): string {
 	const { essence } = analysis
-	return `Generate a stack-agnostic implementation prompt for Typography System.
+	return `Generate an implementation prompt for Typography System.
 
-The AI agent needs to implement the complete typography system — font families, type scale, font weights, line heights, and typographic rhythm. This builds on the design tokens defined in the previous step. Describe the system abstractly — the agent will implement it using its chosen approach.
+The AI agent needs to implement the complete typography system — font families, type scale, font weights, line heights, and typographic rhythm. This builds on the design tokens defined in the previous step.
+
+${buildEnvironmentSection(env)}
 
 ## Design Essence
 ${essence.summary}

@@ -16,6 +16,7 @@ import { generateReadme } from "./generators/readme-gen.js"
 import { generateResponsivePrompt } from "./generators/responsive-prompt.js"
 import { generateSetupPrompt } from "./generators/setup-prompt.js"
 import { generateTypographyPrompt } from "./generators/typography-prompt.js"
+import { resolveEnvironment } from "./resolve-environment.js"
 
 const CRITICAL_STEP_TYPES = new Set(["setup", "design-tokens", "typography"])
 
@@ -31,6 +32,7 @@ export async function runPromptGeneration(
 
 	phaseStart("Phase 4", "Planning implementation steps")
 
+	const env = resolveEnvironment(analysis.techStack)
 	const stepPlan = planSteps(analysis)
 	logger.info(`Planned ${stepPlan.totalSteps} implementation steps`)
 
@@ -44,12 +46,13 @@ export async function runPromptGeneration(
 
 			switch (planEntry.stepType) {
 				case "setup":
-					step = await generateSetupPrompt(analysis, context, model, usage)
+					step = await generateSetupPrompt(analysis, context, env, model, usage)
 					break
 				case "design-tokens":
 					step = await generateDesignTokensPrompt(
 						analysis,
 						context,
+						env,
 						model,
 						usage,
 						planEntry.stepNumber,
@@ -60,6 +63,7 @@ export async function runPromptGeneration(
 					step = await generateTypographyPrompt(
 						analysis,
 						context,
+						env,
 						model,
 						usage,
 						planEntry.stepNumber,
@@ -67,16 +71,16 @@ export async function runPromptGeneration(
 					)
 					break
 				case "layout-shell":
-					step = await generateLayoutShellPrompt(planEntry, context, model, usage)
+					step = await generateLayoutShellPrompt(planEntry, context, env, model, usage)
 					break
 				case "showcase-pages":
-					step = await generateShowcasePagesPrompt(planEntry, context, model, usage)
+					step = await generateShowcasePagesPrompt(planEntry, context, env, model, usage)
 					break
 				case "responsive":
-					step = await generateResponsivePrompt(planEntry, context, model, usage)
+					step = await generateResponsivePrompt(planEntry, context, env, model, usage)
 					break
 				case "interactions":
-					step = await generateInteractionsPrompt(planEntry, context, model, usage)
+					step = await generateInteractionsPrompt(planEntry, context, env, model, usage)
 					break
 				default:
 					logger.warn(`Unknown step type: ${planEntry.stepType}, skipping`)
