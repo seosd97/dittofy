@@ -37,7 +37,12 @@ export async function generateInteractionsPrompt(
 function buildInteractionsPromptText(step: StepPlanEntry, context: string): string {
 	return `Generate a stack-agnostic implementation prompt for Step ${step.stepNumber}: ${step.title}.
 
-The AI agent needs to implement animations, transitions, hover effects, and gesture-based interactions. Describe the visual behavior (duration, easing, trigger, what changes) — not framework-specific animation code. The agent will choose appropriate animation tools for its stack.
+The AI agent needs to add animations, transitions, hover effects, and interactions to the showcase pages (Home, About) and the design system elements. Describe the visual behavior (duration, easing, trigger, what changes) — not framework-specific animation code. The agent will choose appropriate animation tools for its stack.
+
+## Target
+Apply interactions to:
+- The Home and About showcase pages (page entrance animations, scroll effects, section transitions)
+- Design system elements used in those pages (button hover/active states, link transitions, card hover effects)
 
 ## Scope
 ${step.scope}
@@ -48,5 +53,5 @@ This step depends on steps: ${step.dependencies.join(", ")}
 ## Interaction Patterns & Animation Specs
 ${context}
 
-Generate a comprehensive, self-contained prompt with all animation specs (duration, easing, properties), transition values, and gesture details inline. Describe what the user sees and how elements behave, not which animation library to use.`
+Generate a comprehensive, self-contained prompt with all animation specs (duration, easing, properties), transition values, and interaction details inline. Describe what the user sees and how elements behave, not which animation library to use.`
 }

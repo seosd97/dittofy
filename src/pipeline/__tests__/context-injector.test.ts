@@ -40,6 +40,7 @@ function createAnalysis(overrides: Partial<AnalysisResult> = {}): AnalysisResult
 					name: "Button",
 					filePath: "src/components/Button.tsx",
 					category: "atom",
+					tier: "core",
 					props: [{ name: "variant", type: "string", required: false, defaultValue: "primary" }],
 					variants: ["primary", "secondary"],
 					description: "Primary action button",
@@ -49,6 +50,7 @@ function createAnalysis(overrides: Partial<AnalysisResult> = {}): AnalysisResult
 					name: "Card",
 					filePath: "src/components/Card.tsx",
 					category: "molecule",
+					tier: "design-system",
 					props: [],
 					variants: [],
 					description: "Content card",
@@ -169,19 +171,18 @@ describe("injectContext", () => {
 			}
 			const ctx = injectContext(step, analysis, emptyDocSet)
 
-			// Setup context should be stack-agnostic
 			expect(ctx).not.toContain("Next.js")
 			expect(ctx).not.toContain("shadcn/ui")
 			expect(ctx).not.toContain("Vite")
 		})
 	})
 
-	describe("design-system context", () => {
-		it("includes tokens and typography", () => {
+	describe("design-tokens context", () => {
+		it("includes color, spacing, radius, shadow tokens", () => {
 			const step: StepPlanEntry = {
 				stepNumber: 2,
-				stepType: "design-system",
-				title: "DS",
+				stepType: "design-tokens",
+				title: "Design Tokens",
 				scope: "",
 				dependencies: [1],
 			}
@@ -190,112 +191,106 @@ describe("injectContext", () => {
 			expect(ctx).toContain("primary")
 			expect(ctx).toContain("#3b82f6")
 			expect(ctx).toContain("0.5rem")
-			expect(ctx).toContain("Inter")
-			expect(ctx).toContain("2.25rem")
+			expect(ctx).toContain("0.375rem")
+			expect(ctx).toContain("Token doc content")
 		})
 
-		it("includes only design token and typography reference docs", () => {
+		it("does not include typography data", () => {
 			const step: StepPlanEntry = {
 				stepNumber: 2,
-				stepType: "design-system",
-				title: "DS",
+				stepType: "design-tokens",
+				title: "Design Tokens",
 				scope: "",
 				dependencies: [1],
 			}
 			const ctx = injectContext(step, createAnalysis(), docsWithDesign)
 
-			expect(ctx).toContain("Token doc content")
-			expect(ctx).toContain("Typography doc content")
-			expect(ctx).not.toContain("Component doc content")
+			expect(ctx).not.toContain("Inter")
+			expect(ctx).not.toContain("Font Families")
+			expect(ctx).not.toContain("Typography doc content")
 		})
 
 		it("handles null tokens gracefully", () => {
 			const step: StepPlanEntry = {
 				stepNumber: 2,
-				stepType: "design-system",
-				title: "DS",
+				stepType: "design-tokens",
+				title: "Design Tokens",
 				scope: "",
 				dependencies: [1],
 			}
-			const ctx = injectContext(
-				step,
-				createAnalysis({ designTokens: null, typography: null }),
-				emptyDocSet,
-			)
+			const ctx = injectContext(step, createAnalysis({ designTokens: null }), emptyDocSet)
 
 			expect(ctx).toContain("Color Tokens")
-			expect(ctx).toContain("N/A")
 		})
 	})
 
-	describe("components context", () => {
-		it("includes only specified components via componentNames", () => {
+	describe("typography context", () => {
+		it("includes font families, scale, weights, line heights", () => {
 			const step: StepPlanEntry = {
 				stepNumber: 3,
-				stepType: "components",
-				title: "Components",
-				scope: "Button",
-				dependencies: [1, 2],
-				componentNames: ["Button"],
+				stepType: "typography",
+				title: "Typography",
+				scope: "",
+				dependencies: [2],
 			}
-			const ctx = injectContext(step, createAnalysis(), emptyDocSet)
+			const ctx = injectContext(step, createAnalysis(), docsWithDesign)
 
-			expect(ctx).toContain("Button")
-			expect(ctx).toContain("Primary action button")
-			expect(ctx).toContain("primary")
-			expect(ctx).toContain("secondary")
-			expect(ctx).not.toContain("Content card")
-			// Stack-agnostic: no framework references
-			expect(ctx).not.toContain("Next.js")
-			expect(ctx).not.toContain("Tailwind CSS")
+			expect(ctx).toContain("Inter")
+			expect(ctx).toContain("2.25rem")
+			expect(ctx).toContain("700")
+			expect(ctx).toContain("1.5")
+			expect(ctx).toContain("Typography doc content")
 		})
 
-		it("returns fallback when no matching components", () => {
+		it("does not include color tokens", () => {
 			const step: StepPlanEntry = {
 				stepNumber: 3,
-				stepType: "components",
-				title: "Components",
+				stepType: "typography",
+				title: "Typography",
 				scope: "",
-				dependencies: [1, 2],
-				componentNames: ["NonExistent"],
+				dependencies: [2],
 			}
-			const ctx = injectContext(step, createAnalysis(), emptyDocSet)
+			const ctx = injectContext(step, createAnalysis(), docsWithDesign)
 
-			expect(ctx).toContain("No matching components")
-		})
-
-		it("handles empty componentNames", () => {
-			const step: StepPlanEntry = {
-				stepNumber: 3,
-				stepType: "components",
-				title: "Components",
-				scope: "",
-				dependencies: [1, 2],
-			}
-			const ctx = injectContext(step, createAnalysis(), emptyDocSet)
-
-			expect(ctx).toContain("No matching components")
+			expect(ctx).not.toContain("#3b82f6")
+			expect(ctx).not.toContain("Token doc content")
 		})
 	})
 
-	describe("pages context", () => {
-		it("includes page structures and layout system", () => {
+	describe("layout-shell context", () => {
+		it("includes layout approach, containers, grids, and navigation", () => {
 			const step: StepPlanEntry = {
 				stepNumber: 4,
-				stepType: "pages",
-				title: "Pages",
+				stepType: "layout-shell",
+				title: "Layout Shell",
 				scope: "",
-				dependencies: [1, 2, 3],
+				dependencies: [2, 3],
 			}
 			const ctx = injectContext(step, createAnalysis(), emptyDocSet)
 
-			expect(ctx).toContain("Home")
-			expect(ctx).toContain("hero")
 			expect(ctx).toContain("CSS Grid + Flexbox")
 			expect(ctx).toContain("1200px")
 			expect(ctx).toContain("12 columns")
 			expect(ctx).toContain("sidebar")
-			// Stack-agnostic: no framework references
+			expect(ctx).toContain("Grid-based")
+		})
+	})
+
+	describe("showcase-pages context", () => {
+		it("includes design essence, tokens, layout, and component catalog", () => {
+			const step: StepPlanEntry = {
+				stepNumber: 5,
+				stepType: "showcase-pages",
+				title: "Showcase Pages",
+				scope: "",
+				dependencies: [2, 3, 4],
+			}
+			const ctx = injectContext(step, createAnalysis(), emptyDocSet)
+
+			expect(ctx).toContain("Modern SaaS dashboard")
+			expect(ctx).toContain("#3b82f6")
+			expect(ctx).toContain("CSS Grid + Flexbox")
+			expect(ctx).toContain("Button")
 			expect(ctx).not.toContain("Next.js")
 			expect(ctx).not.toContain("Tailwind CSS")
 		})
@@ -304,11 +299,11 @@ describe("injectContext", () => {
 	describe("responsive context", () => {
 		it("includes breakpoints and patterns", () => {
 			const step: StepPlanEntry = {
-				stepNumber: 5,
+				stepNumber: 6,
 				stepType: "responsive",
 				title: "Responsive",
 				scope: "",
-				dependencies: [1, 2],
+				dependencies: [2, 5],
 			}
 			const ctx = injectContext(step, createAnalysis(), emptyDocSet)
 
@@ -321,11 +316,11 @@ describe("injectContext", () => {
 	describe("interactions context", () => {
 		it("includes animations, transitions, and gestures", () => {
 			const step: StepPlanEntry = {
-				stepNumber: 6,
+				stepNumber: 7,
 				stepType: "interactions",
 				title: "Interactions",
 				scope: "",
-				dependencies: [1, 2],
+				dependencies: [2, 5],
 			}
 			const ctx = injectContext(step, createAnalysis(), emptyDocSet)
 
@@ -339,13 +334,12 @@ describe("injectContext", () => {
 	describe("generic context (unknown stepType)", () => {
 		it("falls back to essence + all documents", () => {
 			const step: StepPlanEntry = {
-				stepNumber: 7,
+				stepNumber: 8,
 				stepType: "setup",
 				title: "Custom",
 				scope: "",
 				dependencies: [],
 			}
-			// Override stepType to trigger default
 			const customStep = { ...step, stepType: "unknown" as "setup" }
 			const ctx = injectContext(customStep, createAnalysis(), docsWithDesign)
 

@@ -8,13 +8,16 @@ import { planSteps } from "@pipeline/planners/steps.js"
 import { logger, phaseStart, phaseSuccess } from "@utils/logger.js"
 import type { LanguageModel } from "ai"
 import { injectContext } from "./context-injector.js"
-import { generateComponentsPrompt } from "./generators/components-prompt.js"
-import { generateDesignSystemPrompt } from "./generators/design-system-prompt.js"
+import { generateDesignTokensPrompt } from "./generators/design-tokens-prompt.js"
 import { generateInteractionsPrompt } from "./generators/interactions-prompt.js"
-import { generatePagesPrompt } from "./generators/pages-prompt.js"
+import { generateLayoutShellPrompt } from "./generators/layout-shell-prompt.js"
+import { generateShowcasePagesPrompt } from "./generators/pages-prompt.js"
 import { generateReadme } from "./generators/readme-gen.js"
 import { generateResponsivePrompt } from "./generators/responsive-prompt.js"
 import { generateSetupPrompt } from "./generators/setup-prompt.js"
+import { generateTypographyPrompt } from "./generators/typography-prompt.js"
+
+const CRITICAL_STEP_TYPES = new Set(["setup", "design-tokens", "typography"])
 
 export async function runPromptGeneration(
 	analysis: AnalysisResult,
@@ -43,14 +46,31 @@ export async function runPromptGeneration(
 				case "setup":
 					step = await generateSetupPrompt(analysis, context, model, usage)
 					break
-				case "design-system":
-					step = await generateDesignSystemPrompt(analysis, context, model, usage)
+				case "design-tokens":
+					step = await generateDesignTokensPrompt(
+						analysis,
+						context,
+						model,
+						usage,
+						planEntry.stepNumber,
+						planEntry.dependencies,
+					)
 					break
-				case "components":
-					step = await generateComponentsPrompt(planEntry, context, model, usage)
+				case "typography":
+					step = await generateTypographyPrompt(
+						analysis,
+						context,
+						model,
+						usage,
+						planEntry.stepNumber,
+						planEntry.dependencies,
+					)
 					break
-				case "pages":
-					step = await generatePagesPrompt(planEntry, context, model, usage)
+				case "layout-shell":
+					step = await generateLayoutShellPrompt(planEntry, context, model, usage)
+					break
+				case "showcase-pages":
+					step = await generateShowcasePagesPrompt(planEntry, context, model, usage)
 					break
 				case "responsive":
 					step = await generateResponsivePrompt(planEntry, context, model, usage)
@@ -59,8 +79,8 @@ export async function runPromptGeneration(
 					step = await generateInteractionsPrompt(planEntry, context, model, usage)
 					break
 				default:
-					step = await generateComponentsPrompt(planEntry, context, model, usage)
-					break
+					logger.warn(`Unknown step type: ${planEntry.stepType}, skipping`)
+					continue
 			}
 
 			steps.push(step)
@@ -72,8 +92,7 @@ export async function runPromptGeneration(
 					: `Unknown error generating step ${planEntry.stepNumber}`
 			errors.push({ phase: "prompt-gen", message, cause: error })
 
-			const isCritical = planEntry.stepType === "setup" || planEntry.stepType === "design-system"
-			if (isCritical) {
+			if (CRITICAL_STEP_TYPES.has(planEntry.stepType)) {
 				logger.error(
 					`Critical step failed (${planEntry.stepType}): ${message} — skipping remaining steps`,
 				)

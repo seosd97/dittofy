@@ -54,9 +54,8 @@ export const responsiveAspect = defineAspect({
 					title: "Responsive Design",
 					scope: "Implement responsive breakpoints, media queries, and adaptive layouts",
 					dependsOn: [
-						{ kind: "type", stepType: "setup" },
-						{ kind: "type", stepType: "design-system" },
-						{ kind: "type", stepType: "pages" },
+						{ kind: "type", stepType: "design-tokens" },
+						{ kind: "type", stepType: "showcase-pages" },
 					],
 				},
 			]

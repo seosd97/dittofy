@@ -7,13 +7,28 @@ export function buildInteractionsDocPrompt(
 	essence: DesignEssence,
 	lang: "ko" | "en",
 ): string {
-	return `Generate an interactions document based on the following analysis:
+	const langInstruction =
+		lang === "ko"
+			? "Write all prose and descriptions in Korean. Use English for CSS values and animation terms."
+			: "Write all content in English."
 
-## Interaction Patterns
-${JSON.stringify(data, null, 2)}
+	return `Generate an interaction patterns reference document based on the following analysis.
+
+${langInstruction}
 
 ## Design Essence
-Interaction Strategy: ${essence.interactionStrategy}
+- Summary: ${essence.summary}
+- Interaction Strategy: ${essence.interactionStrategy}
+- Design Philosophy: ${essence.designPhilosophy}
 
-Write a comprehensive interactions reference covering overall motion style, animation patterns, transition defaults, and interaction design principles.`
+## Analyzed Interaction Patterns
+${JSON.stringify(data, null, 2)}
+
+## Output Structure
+1. **Motion Style** — Describe the overall motion personality (restrained, moderate, expressive) and design intent.
+2. **Animations** — List animation patterns with type, description, and suggested timing/easing values.
+3. **Transitions** — List transition defaults: property, duration, easing.
+4. **Interaction Principles** — Describe the guiding principles for interaction design (feedback, responsiveness, consistency).
+
+These patterns will be applied to showcase pages (Home, About), not to replicate the source project's exact animations.`
 }

@@ -62,9 +62,8 @@ export const interactionsAspect = defineAspect({
 					title: "Interactions & Animations",
 					scope: "Implement animations, transitions, hover effects, and gesture interactions",
 					dependsOn: [
-						{ kind: "type", stepType: "setup" },
-						{ kind: "type", stepType: "design-system" },
-						{ kind: "type", stepType: "pages" },
+						{ kind: "type", stepType: "design-tokens" },
+						{ kind: "type", stepType: "showcase-pages" },
 					],
 				},
 			]

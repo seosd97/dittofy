@@ -86,6 +86,7 @@ export interface ComponentInfo {
 	name: string
 	filePath: string
 	category: "atom" | "molecule" | "organism" | "template"
+	tier: "core" | "design-system" | "domain"
 	props: PropInfo[]
 	variants: string[]
 	description: string

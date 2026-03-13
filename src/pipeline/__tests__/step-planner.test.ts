@@ -2,11 +2,12 @@ import type { AnalysisResult, ComponentInfo } from "@defs/analysis.js"
 import { planSteps } from "@pipeline/planners/steps.js"
 import { describe, expect, it } from "vitest"
 
-function makeComponent(name: string): ComponentInfo {
+function makeComponent(name: string, tier: "core" | "design-system" | "domain" = "core"): ComponentInfo {
 	return {
 		name,
 		filePath: `src/components/${name}.tsx`,
 		category: "atom",
+		tier,
 		props: [],
 		variants: [],
 		description: `${name} component`,
@@ -44,18 +45,19 @@ function createMinimalAnalysis(overrides: Partial<AnalysisResult> = {}): Analysi
 }
 
 describe("planSteps", () => {
-	it("always includes setup and design-system steps", () => {
+	it("always includes setup, design-tokens, typography, and showcase-pages steps", () => {
 		const plan = planSteps(createMinimalAnalysis())
-		expect(plan.totalSteps).toBe(2)
+		expect(plan.totalSteps).toBe(4)
 		expect(plan.steps[0].stepType).toBe("setup")
-		expect(plan.steps[0].stepNumber).toBe(1)
 		expect(plan.steps[0].dependencies).toEqual([])
-		expect(plan.steps[1].stepType).toBe("design-system")
-		expect(plan.steps[1].stepNumber).toBe(2)
+		expect(plan.steps[1].stepType).toBe("design-tokens")
 		expect(plan.steps[1].dependencies).toEqual([1])
+		expect(plan.steps[2].stepType).toBe("typography")
+		expect(plan.steps[2].dependencies).toEqual([2])
+		expect(plan.steps[3].stepType).toBe("showcase-pages")
 	})
 
-	it("adds component steps grouped by 5", () => {
+	it("does not generate component steps", () => {
 		const components = Array.from({ length: 12 }, (_, i) => makeComponent(`Comp${i + 1}`))
 		const plan = planSteps(
 			createMinimalAnalysis({
@@ -63,43 +65,53 @@ describe("planSteps", () => {
 			}),
 		)
 
-		const compSteps = plan.steps.filter((s) => s.stepType === "components")
-		expect(compSteps).toHaveLength(3) // ceil(12/5) = 3 groups
-		expect(compSteps[0].componentNames).toHaveLength(5)
-		expect(compSteps[1].componentNames).toHaveLength(5)
-		expect(compSteps[2].componentNames).toHaveLength(2)
-		// All depend on steps 1 and 2
-		for (const step of compSteps) {
-			expect(step.dependencies).toEqual([1, 2])
-		}
+		const compSteps = plan.steps.filter((s) => s.stepType === ("components" as string))
+		expect(compSteps).toHaveLength(0)
 	})
 
-	it("adds page step with correct dependencies", () => {
+	it("adds layout-shell step when layout data exists", () => {
 		const plan = planSteps(
 			createMinimalAnalysis({
-				componentCatalog: {
-					components: [makeComponent("Button"), makeComponent("Card")],
-					patterns: [],
-				},
-				pageStructures: {
-					pages: [
-						{
-							name: "Home",
-							route: "/",
-							layout: "default",
-							sections: [],
-							components: [],
-							confidence: "high",
-						},
-					],
+				layoutSystem: {
+					approach: { value: "CSS Grid + Flexbox", confidence: "high" },
+					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem", confidence: "high" }],
+					grids: [{ type: "css-grid", columns: 12, gap: "1rem", confidence: "high" }],
+					navigation: [],
 				},
 			}),
 		)
 
-		const pageStep = plan.steps.find((s) => s.stepType === "pages")
+		const layoutStep = plan.steps.find((s) => s.stepType === "layout-shell")
+		expect(layoutStep).toBeDefined()
+		// Depends on design-tokens(2) and typography(3)
+		expect(layoutStep?.dependencies).toEqual([2, 3])
+	})
+
+	it("showcase-pages depends on design-tokens, typography, and layout-shell", () => {
+		const plan = planSteps(
+			createMinimalAnalysis({
+				layoutSystem: {
+					approach: { value: "CSS Grid", confidence: "high" },
+					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem", confidence: "high" }],
+					grids: [],
+					navigation: [],
+				},
+			}),
+		)
+
+		const pageStep = plan.steps.find((s) => s.stepType === "showcase-pages")
 		expect(pageStep).toBeDefined()
-		// Depends on setup(1), design-system(2), and component step(3)
-		expect(pageStep?.dependencies).toEqual([1, 2, 3])
+		// design-tokens(2), typography(3), layout-shell(4)
+		expect(pageStep?.dependencies).toEqual([2, 3, 4])
+	})
+
+	it("showcase-pages depends on design-tokens and typography when no layout", () => {
+		const plan = planSteps(createMinimalAnalysis())
+
+		const pageStep = plan.steps.find((s) => s.stepType === "showcase-pages")
+		expect(pageStep).toBeDefined()
+		// design-tokens(2), typography(3), no layout-shell
+		expect(pageStep?.dependencies).toEqual([2, 3])
 	})
 
 	it("adds responsive step when patterns exist", () => {
@@ -152,22 +164,13 @@ describe("planSteps", () => {
 	})
 
 	it("enforces max 12 steps", () => {
-		// 50 components → ceil(50/5) = 10 groups + setup + design-system + pages + responsive + interactions = 15
-		const components = Array.from({ length: 50 }, (_, i) => makeComponent(`C${i}`))
 		const plan = planSteps(
 			createMinimalAnalysis({
-				componentCatalog: { components, patterns: [] },
-				pageStructures: {
-					pages: [
-						{
-							name: "Home",
-							route: "/",
-							layout: "default",
-							sections: [],
-							components: [],
-							confidence: "high",
-						},
-					],
+				layoutSystem: {
+					approach: { value: "CSS Grid", confidence: "high" },
+					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem", confidence: "high" }],
+					grids: [],
+					navigation: [],
 				},
 				responsiveStrategy: {
 					approach: { value: "mobile-first", confidence: "high" },
@@ -189,21 +192,13 @@ describe("planSteps", () => {
 	})
 
 	it("step numbers are sequential", () => {
-		const components = Array.from({ length: 8 }, (_, i) => makeComponent(`C${i}`))
 		const plan = planSteps(
 			createMinimalAnalysis({
-				componentCatalog: { components, patterns: [] },
-				pageStructures: {
-					pages: [
-						{
-							name: "Home",
-							route: "/",
-							layout: "default",
-							sections: [],
-							components: [],
-							confidence: "high",
-						},
-					],
+				layoutSystem: {
+					approach: { value: "CSS Grid", confidence: "high" },
+					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem", confidence: "high" }],
+					grids: [],
+					navigation: [],
 				},
 			}),
 		)

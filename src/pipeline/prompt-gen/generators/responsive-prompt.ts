@@ -37,7 +37,12 @@ export async function generateResponsivePrompt(
 function buildResponsivePromptText(step: StepPlanEntry, context: string): string {
 	return `Generate a stack-agnostic implementation prompt for Step ${step.stepNumber}: ${step.title}.
 
-The AI agent needs to implement responsive design including breakpoints and adaptive layouts. Describe breakpoint values, what changes at each breakpoint, and layout adaptation rules — not framework-specific responsive syntax (no Tailwind md: classes, no specific media query libraries). The agent will apply these rules using its project's chosen approach.
+The AI agent needs to make the showcase pages (Home, About) and the design system responsive. Describe breakpoint values, what changes at each breakpoint, and layout adaptation rules — not framework-specific responsive syntax (no Tailwind md: classes, no specific media query libraries). The agent will apply these rules using its project's chosen approach.
+
+## Target
+Apply responsive behavior to:
+- The Home and About showcase pages created in a previous step
+- The design system's base styles and token usage (e.g., responsive typography, spacing adjustments)
 
 ## Scope
 ${step.scope}
@@ -48,5 +53,5 @@ This step depends on steps: ${step.dependencies.join(", ")}
 ## Responsive Strategy & Breakpoints
 ${context}
 
-Generate a comprehensive, self-contained prompt with all breakpoint values, responsive patterns, and adaptation rules inline. Describe what changes visually at each breakpoint.`
+Generate a comprehensive, self-contained prompt with all breakpoint values, responsive patterns, and adaptation rules inline. Describe what the user sees at each breakpoint and how layout/typography/spacing adapt.`
 }

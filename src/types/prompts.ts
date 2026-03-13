@@ -20,9 +20,10 @@ export interface StepPlan {
 
 export type StepType =
 	| "setup"
-	| "design-system"
-	| "components"
-	| "pages"
+	| "design-tokens"
+	| "typography"
+	| "layout-shell"
+	| "showcase-pages"
 	| "responsive"
 	| "interactions"
 
@@ -32,6 +33,4 @@ export interface StepPlanEntry {
 	title: string
 	scope: string
 	dependencies: number[]
-	/** Component names for "components" stepType steps */
-	componentNames?: string[]
 }

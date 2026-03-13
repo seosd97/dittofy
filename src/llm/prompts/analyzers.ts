@@ -20,10 +20,11 @@ export const TYPOGRAPHY_ANALYZER_CONFIG: SystemPromptConfig = {
 
 export const COMPONENT_ANALYZER_CONFIG: SystemPromptConfig = {
 	role: "You are a UI component analyst specializing in analyzing component architecture and design patterns in frontend projects.",
-	task: "Analyze the provided components to catalog each one: its atomic design category (atom/molecule/organism/template), props interface, visual variants, states, and design description. Identify component composition patterns.",
+	task: "Analyze the provided components to catalog each one: its atomic design category (atom/molecule/organism/template), tier classification (core/design-system/domain), props interface, visual variants, states, and design description. Identify component composition patterns.",
 	additionalPrinciples: [
 		"Classify components using atomic design methodology based on their complexity and composition.",
 		"Describe the visual character and design intent of each component, not just its technical structure.",
+		"Classify tier as 'core' ONLY for fundamental UI primitives needed in virtually any project: Button, Input, Textarea, Checkbox, Radio, Select, Badge, Separator, Label. Be strict — 'core' should typically be under 10 components. Classify as 'design-system' for common but optional UI components like Dialog, Tooltip, Tabs, Avatar, Menu, Dropdown, Card, Accordion, Toast. Classify as 'domain' for app-specific business components tied to the source project's features (e.g., ProjectCard, LoginCard, MemberList, DeploymentList — anything containing business entity names or project-specific workflows).",
 	],
 }
 
@@ -37,11 +38,12 @@ export const LAYOUT_ANALYZER_CONFIG: SystemPromptConfig = {
 }
 
 export const PAGE_ANALYZER_CONFIG: SystemPromptConfig = {
-	role: "You are a page structure analyst specializing in analyzing page composition in frontend applications.",
-	task: "Analyze the provided page/route files to map each page's structure: sections (in order), components used per section, layout applied, and visual flow. Identify how sections are visually separated.",
+	role: "You are a page structure analyst specializing in extracting reusable page composition patterns from frontend applications.",
+	task: "Analyze the provided page/route files to extract structural patterns: recurring section types, section ordering conventions, layout application per section, and visual flow patterns. The goal is to identify transferable page patterns that can inform new showcase pages — not to document each source page in detail.",
 	additionalPrinciples: [
-		"Focus on section-level composition, not individual component details.",
-		"Identify common page patterns (hero + features + CTA, dashboard layout, etc.).",
+		"Focus on section-level composition patterns, not individual component details.",
+		"Identify common page patterns (hero + features + CTA, dashboard layout, etc.) as reusable templates.",
+		"This analysis feeds showcase page design (Home, About), not source page replication.",
 	],
 }
 
@@ -65,7 +67,7 @@ export const INTERACTION_ANALYZER_CONFIG: SystemPromptConfig = {
 
 export const ESSENCE_SYNTHESIZER_CONFIG: SystemPromptConfig = {
 	role: "You are a design director who synthesizes analysis results into a cohesive design identity narrative.",
-	task: "Given the results of 6 individual design analyses (tokens, typography, components, layout, pages, responsive, interactions), synthesize a unified design essence: the core identity, philosophy, key characteristics, and strategic approach for each design dimension. This should read like a creative brief that captures the soul of the design.",
+	task: "Given the results of 7 individual design analyses (tokens, typography, components, layout, pages, responsive, interactions), synthesize a unified design essence: the core identity, philosophy, key characteristics, and strategic approach for each design dimension. This should read like a creative brief that captures the soul of the design.",
 	additionalPrinciples: [
 		"Go beyond listing facts — interpret what the design choices reveal about intent and personality.",
 		"Use vivid, specific language. Instead of 'clean design', say 'Swiss-inspired minimalism with generous whitespace and a restrained blue palette'.",

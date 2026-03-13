@@ -2,6 +2,27 @@
 
 Ditto analyzes frontend repositories to extract design essence and generate AI coding agent prompts.
 
+## Output Philosophy
+
+Ditto extracts **design essence for mass production**, NOT 1:1 source replication.
+
+- **Design tokens, typography, layout** are extracted as reusable specifications
+- **Components** are analyzed and documented as a **pattern reference** only — no component implementation prompts are generated
+- **Pages** are NOT replicated from the source. Instead, two **showcase pages** (Home, About) are generated to demonstrate the extracted design system in action
+- All implementation prompts are **stack-agnostic** — they describe WHAT to build (visual specs), never HOW (no framework-specific code)
+
+### Generated Step Types
+
+| Step | Source | Purpose |
+|------|--------|---------|
+| `setup` | infra | Project initialization with framework and build tooling |
+| `design-tokens` | infra | Color palette, spacing, radius, shadows, z-index |
+| `typography` | infra | Font families, type scale, weights, line heights |
+| `layout-shell` | layout aspect | Container strategy, grid, navigation skeleton |
+| `showcase-pages` | pages aspect | Home + About pages demonstrating the design system |
+| `responsive` | responsive aspect | Breakpoints and adaptive patterns for showcase pages |
+| `interactions` | interactions aspect | Animations, transitions, micro-interactions |
+
 ## Tech Stack
 
 - **Runtime**: Node.js ≥ 20, TypeScript 5.7+, ESM-only
@@ -35,9 +56,11 @@ All imports use path aliases defined in `tsconfig.json`, `vitest.config.ts`, and
 
 Each design aspect (tokens, typography, components, layout, pages, responsive, interactions) is a self-contained vertical slice under `src/aspects/<name>/` with three files:
 
-- `schema.ts` — Zod schema for the analysis output
-- `prompts.ts` — System prompt configuration
+- `schema.ts` — Zod schemas for both analysis output and doc generation output
+- `prompts.ts` — Analyzer SystemPromptConfig + `buildXxxDocPrompt()` for doc generation
 - `descriptor.ts` — `AspectDescriptor<K>` combining analyzer, doc generator, and planning config
+
+> **Note**: The components aspect runs analysis and generates documentation (pattern reference) but declares no implementation steps (`planSteps: () => []`). Component data is used as reference context for showcase pages.
 
 ### Key Types
 
@@ -62,7 +85,7 @@ src/
 │   ├── registry.ts
 │   └── <name>/         # schema.ts, prompts.ts, descriptor.ts
 ├── cli/                # CLI entry point and commands
-├── config/             # Consolidated constants (analysis, extraction, token-estimation, prompt-gen)
+├── config/             # Consolidated constants (analysis, extraction, token-estimation)
 ├── llm/
 │   ├── core/           # client.ts, provider.ts, retry.ts (LLM infrastructure)
 │   ├── runners/        # analyzer.ts, generator.ts (generic runners)

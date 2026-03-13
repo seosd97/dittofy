@@ -41,17 +41,16 @@ export const pagesAspect = defineAspect({
 
 	planning: {
 		docs: [{ filename: "05-page-structures.md", title: "Page Structures", category: "dynamic" }],
-		planSteps: (analysis: AnalysisResult): StepDeclaration[] => {
-			if ((analysis.pageStructures?.pages.length ?? 0) === 0) return []
+		planSteps: (_analysis: AnalysisResult): StepDeclaration[] => {
 			return [
 				{
-					stepType: "pages",
-					title: "Page Implementation",
-					scope: "Implement page layouts, routing, and page-level composition of components",
+					stepType: "showcase-pages",
+					title: "Showcase Pages",
+					scope: "Implement sample showcase pages (Home, About) that demonstrate the design system in action. These are NOT replicas of the source project pages — they are new pages that showcase the extracted design tokens, typography, components, and layout patterns.",
 					dependsOn: [
-						{ kind: "type", stepType: "setup" },
-						{ kind: "type", stepType: "design-system" },
-						{ kind: "all-of-type", stepType: "components" },
+						{ kind: "type", stepType: "design-tokens" },
+						{ kind: "type", stepType: "typography" },
+						{ kind: "type", stepType: "layout-shell" },
 					],
 				},
 			]

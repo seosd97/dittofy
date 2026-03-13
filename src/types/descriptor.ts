@@ -2,9 +2,7 @@ import type { z } from "zod"
 import type { DesignEssence } from "./analysis.js"
 import type { AnalysisResult } from "./analysis.js"
 import type { AspectName, AspectTypeMap } from "./aspect-map.js"
-import type { DocumentSet } from "./documentation.js"
 import type { FileCategory } from "./extraction.js"
-import type { StepPlanEntry } from "./prompts.js"
 
 /** LLM 호출 프리셋 이름 */
 export type PresetName =
@@ -46,7 +44,6 @@ export interface StepDeclaration {
 	title: string
 	scope: string
 	dependsOn: StepDependencyRef[]
-	meta?: Record<string, unknown>
 }
 
 /** 문서 생성 선언 */
@@ -88,6 +85,5 @@ export interface AspectDescriptor<K extends AspectName> {
 	planning: {
 		docs: DocDeclaration[]
 		planSteps: (analysis: AnalysisResult) => StepDeclaration[]
-		buildContext?: (step: StepPlanEntry, analysis: AnalysisResult, docs: DocumentSet) => string
 	}
 }

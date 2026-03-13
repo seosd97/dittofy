@@ -15,10 +15,16 @@ const INFRA_STEPS: StepDeclaration[] = [
 		dependsOn: [],
 	},
 	{
-		stepType: "design-system",
-		title: "Design System",
-		scope: "Implement design tokens, typography scale, color palette, and base styles",
+		stepType: "design-tokens",
+		title: "Design Tokens",
+		scope: "Implement design tokens: color palette, spacing scale, border radius, shadows, z-index, and global base styles",
 		dependsOn: [{ kind: "type", stepType: "setup" }],
+	},
+	{
+		stepType: "typography",
+		title: "Typography",
+		scope: "Implement typography system: font families, type scale (headings, body, caption), font weights, line heights, and typographic rhythm",
+		dependsOn: [{ kind: "type", stepType: "design-tokens" }],
 	},
 ]
 
@@ -59,7 +65,6 @@ export function planSteps(analysis: AnalysisResult): StepPlan {
 			title: decl.title,
 			scope: decl.scope,
 			dependencies,
-			componentNames: (decl.meta?.componentNames as string[]) ?? undefined,
 		})
 	}
 

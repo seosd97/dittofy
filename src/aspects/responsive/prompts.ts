@@ -7,13 +7,27 @@ export function buildResponsiveDocPrompt(
 	essence: DesignEssence,
 	lang: "ko" | "en",
 ): string {
-	return `Generate a responsive strategy document based on the following analysis:
+	const langInstruction =
+		lang === "ko"
+			? "Write all prose and descriptions in Korean. Use English for breakpoint values and CSS terms."
+			: "Write all content in English."
 
-## Responsive Strategy
-${JSON.stringify(data, null, 2)}
+	return `Generate a responsive strategy reference document based on the following analysis.
+
+${langInstruction}
 
 ## Design Essence
-Summary: ${essence.summary}
+- Summary: ${essence.summary}
+- Layout Strategy: ${essence.layoutStrategy}
+- Design Philosophy: ${essence.designPhilosophy}
 
-Write a comprehensive responsive strategy reference covering the approach, breakpoints reference table, and responsive patterns.`
+## Analyzed Responsive Strategy
+${JSON.stringify(data, null, 2)}
+
+## Output Structure
+1. **Approach** — Describe the overall responsive approach (mobile-first or desktop-first) and the rationale behind it.
+2. **Breakpoints** — Present breakpoints as a reference table: name, value, and what changes at each breakpoint.
+3. **Responsive Patterns** — Describe extracted responsive patterns: how layout, typography, and spacing adapt across breakpoints.
+
+These patterns will be applied to showcase pages (Home, About), not to replicate the source project's responsive behavior.`
 }

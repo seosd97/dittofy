@@ -7,13 +7,29 @@ export function buildTokensDocPrompt(
 	essence: DesignEssence,
 	lang: "ko" | "en",
 ): string {
-	return `Generate a design tokens document based on the following analysis:
+	const langInstruction =
+		lang === "ko"
+			? "Write all prose and descriptions in Korean. Use English for token names and values."
+			: "Write all content in English."
 
-## Design Tokens
-${JSON.stringify(data, null, 2)}
+	return `Generate a design tokens reference document based on the following analysis.
+
+${langInstruction}
 
 ## Design Essence
-Color Strategy: ${essence.colorStrategy}
+- Summary: ${essence.summary}
+- Design Philosophy: ${essence.designPhilosophy}
+- Color Strategy: ${essence.colorStrategy}
 
-Write a comprehensive design tokens reference covering color palette, spacing scale, border radius, shadows, and other tokens.`
+## Analyzed Design Tokens
+${JSON.stringify(data, null, 2)}
+
+## Output Structure
+1. **Color Palette** — Categorize colors by role (surface, text, border, accent, semantic). Include hex values and usage context.
+2. **Spacing Scale** — Present the spacing system as a reference table (name, value, usage).
+3. **Border Radius** — List radius tiers with values.
+4. **Shadows** — List elevation levels with values.
+5. **Other Tokens** — Breakpoints, z-index, and any other extracted tokens.
+
+Focus on actionable reference: a developer should be able to implement these tokens without seeing the original codebase.`
 }

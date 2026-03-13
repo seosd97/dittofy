@@ -7,13 +7,28 @@ export function buildLayoutDocPrompt(
 	essence: DesignEssence,
 	lang: "ko" | "en",
 ): string {
-	return `Generate a layout system document based on the following analysis:
+	const langInstruction =
+		lang === "ko"
+			? "Write all prose and descriptions in Korean. Use English for CSS values and technical terms."
+			: "Write all content in English."
 
-## Layout System
-${JSON.stringify(data, null, 2)}
+	return `Generate a layout system reference document based on the following analysis.
+
+${langInstruction}
 
 ## Design Essence
-Layout Strategy: ${essence.layoutStrategy}
+- Summary: ${essence.summary}
+- Layout Strategy: ${essence.layoutStrategy}
+- Design Philosophy: ${essence.designPhilosophy}
 
-Write a comprehensive layout system reference covering grid system, containers, navigation patterns, and visual hierarchy.`
+## Analyzed Layout System
+${JSON.stringify(data, null, 2)}
+
+## Output Structure
+1. **Grid System** — Describe the grid approach (CSS Grid, Flexbox, hybrid), column structure, and gap values.
+2. **Containers** — List container types with max-width and padding values.
+3. **Navigation Patterns** — Describe navigation structure and behavior.
+4. **Visual Hierarchy** — Describe how spatial organization creates information hierarchy.
+
+Focus on the structural skeleton: a developer should be able to build the page layout shell from this document.`
 }

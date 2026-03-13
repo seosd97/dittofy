@@ -1,5 +1,6 @@
 import { defineAspect } from "@aspects/define-aspect.js"
-import type { LayoutSystem } from "@defs/analysis.js"
+import type { AnalysisResult, LayoutSystem } from "@defs/analysis.js"
+import type { StepDeclaration } from "@defs/descriptor.js"
 import { assembleMarkdown } from "@output/markdown.js"
 import { LAYOUT_ANALYZER_CONFIG, buildLayoutDocPrompt } from "./prompts.js"
 import { layoutDocSchema, layoutSystemSchema } from "./schema.js"
@@ -47,6 +48,20 @@ export const layoutAspect = defineAspect({
 
 	planning: {
 		docs: [{ filename: "04-layout-system.md", title: "Layout System", category: "core" }],
-		planSteps: () => [],
+		planSteps: (analysis: AnalysisResult): StepDeclaration[] => {
+			const ls = analysis.layoutSystem
+			if (!ls || (ls.containers.length === 0 && ls.grids.length === 0)) return []
+			return [
+				{
+					stepType: "layout-shell",
+					title: "Layout Shell",
+					scope: "Implement page layout shell: container strategy, grid system, navigation structure, header/footer skeleton, and page wrapper",
+					dependsOn: [
+						{ kind: "type", stepType: "design-tokens" },
+						{ kind: "type", stepType: "typography" },
+					],
+				},
+			]
+		},
 	},
 })

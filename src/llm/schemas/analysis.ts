@@ -57,6 +57,11 @@ export const componentInfoSchema = z.object({
 	name: z.string(),
 	filePath: z.string().describe("Relative to project root"),
 	category: z.enum(["atom", "molecule", "organism", "template"]),
+	tier: z
+		.enum(["core", "design-system", "domain"])
+		.describe(
+			"'core' for fundamental UI primitives needed in virtually any project (Button, Input, Textarea, Checkbox, Radio, Select, Badge, Separator, Label). 'design-system' for common but optional UI components (Dialog, Tooltip, Tabs, Avatar, Menu, Dropdown, Card, Accordion, etc.). 'domain' for app-specific business components tied to the source project's features (LoginCard, ProjectGrid, MemberList, DeploymentList, etc.).",
+		),
 	props: z.array(propInfoSchema),
 	variants: z.array(z.string()),
 	description: z.string().describe("Visual character and design intent"),
