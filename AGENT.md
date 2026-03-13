@@ -9,27 +9,72 @@ Ditto extracts **design essence for mass production**, NOT 1:1 source replicatio
 - **Design tokens, typography, layout** are extracted as reusable specifications
 - **Components** are analyzed and documented as a **pattern reference** only — no component implementation prompts are generated
 - **Pages** are NOT replicated from the source. Instead, two **showcase pages** (Home, About) are generated to demonstrate the extracted design system in action
-- All implementation prompts are **stack-agnostic** — they describe WHAT to build (visual specs), never HOW (no framework-specific code)
+- Implementation prompts are **environment-aware** — they adapt to the detected stack, or remain stack-agnostic when no environment is detected
 
-### Generated Step Types
+## Output Structure
+
+### Generated Documents (Phase 3)
+
+| File | Aspect | Category | Purpose |
+|------|--------|----------|---------|
+| `00-overview.md` | (pipeline-level) | core | Project identity and design philosophy |
+| `01-design-tokens.md` | tokens | core | Color palette, spacing, radius, shadows, breakpoints |
+| `02-typography.md` | typography | core | Font families, type scale, weights, principles |
+| `03-component-catalog.md` | components | core | Component pattern reference (not implementation) |
+| `04-layout-system.md` | layout | core | Grid, containers, navigation, hierarchy |
+| `05-page-structures.md` | pages | dynamic | Extracted page composition patterns |
+| `06-responsive-strategy.md` | responsive | dynamic | Breakpoints, adaptation patterns |
+| `07-interactions.md` | interactions | dynamic | Animations, transitions, motion style |
+
+- **core** docs are always generated (if analyzer succeeds)
+- **dynamic** docs are generated only when sufficient data exists (`canGenerate()` check)
+
+### Generated Prompts (Phase 4)
 
 | Step | Source | Purpose |
 |------|--------|---------|
-| `setup` | infra | Project initialization with framework and build tooling |
-| `design-tokens` | infra | Color palette, spacing, radius, shadows, z-index |
-| `typography` | infra | Font families, type scale, weights, line heights |
-| `layout-shell` | layout aspect | Container strategy, grid, navigation skeleton |
+| `setup` | infra | Project setup or design system integration into existing project |
+| `design-tokens` | infra | Token definitions using detected styling approach |
+| `typography` | infra | Typography system implementation |
+| `layout-shell` | layout aspect | Page container, grid, navigation skeleton |
 | `showcase-pages` | pages aspect | Home + About pages demonstrating the design system |
-| `responsive` | responsive aspect | Breakpoints and adaptive patterns for showcase pages |
+| `responsive` | responsive aspect | Breakpoint-based adaptation for showcase pages |
 | `interactions` | interactions aspect | Animations, transitions, micro-interactions |
+
+- **Infra steps** (setup, design-tokens, typography) are always included
+- **Aspect steps** are conditional — generated only when the aspect has meaningful data
+- Steps form a dependency DAG: `setup → design-tokens → typography → layout-shell → showcase-pages → responsive/interactions`
 
 ### Environment-Aware Prompt Generation
 
-Before prompt generation, `resolveEnvironment(techStack)` produces an `EnvironmentProfile` that all generators share:
+Before prompt generation, `resolveEnvironment(techStack)` produces an `EnvironmentProfile` shared by all generators:
 
-- **`existing-project`** mode: detected framework/styling/language → prompts use stack-specific conventions (e.g., "add tokens to tailwind.config", "use Next.js app router layout")
-- **`greenfield`** mode: framework unknown → prompts remain stack-agnostic
-- `tokenStrategy` field tells generators how to describe token storage (CSS variables, Tailwind config, theme object, etc.)
+```
+EnvironmentProfile {
+  mode: "existing-project" | "greenfield"
+  framework: string        // e.g., "Next.js"
+  language: string         // e.g., "TypeScript"
+  styling: string          // e.g., "Tailwind CSS"
+  buildTool: string | null
+  uiLibrary: string | null
+  tokenStrategy: string    // e.g., "Define tokens in tailwind.config (theme.extend)..."
+  summary: string
+}
+```
+
+| Mode | Detection | Behavior |
+|------|-----------|----------|
+| `existing-project` | Framework detected with medium/high confidence | Prompts use stack conventions, instruct agent to integrate into existing env |
+| `greenfield` | Framework unknown or low confidence | Prompts remain stack-agnostic, agent chooses its own stack |
+
+Token strategy mapping:
+
+| Styling | Token Strategy |
+|---------|---------------|
+| Tailwind CSS | `tailwind.config` (theme.extend) + CSS variables |
+| SCSS / CSS Modules / Plain CSS | CSS custom properties (`:root` variables) |
+| Styled Components / Emotion | Theme object via ThemeProvider |
+| Vanilla Extract | `createThemeContract` + `createTheme` |
 
 ## Tech Stack
 
@@ -76,6 +121,7 @@ Each design aspect (tokens, typography, components, layout, pages, responsive, i
 - **`AspectDescriptor<K>`** (`src/types/descriptor.ts`): Generic descriptor with `analyzer`, `docGenerator`, and `planning` sections
 - **`ASPECT_REGISTRY`** (`src/aspects/registry.ts`): Typed object keyed by `AspectName` for O(1) lookup
 - **`defineAspect<K>()`** (`src/aspects/define-aspect.ts`): Factory function inferring `K` from `name`
+- **`EnvironmentProfile`** (`src/pipeline/prompt-gen/resolve-environment.ts`): Resolved environment shared across all prompt generators
 
 ### Generic Runners
 
@@ -97,7 +143,7 @@ src/
 ├── llm/
 │   ├── core/           # client.ts, provider.ts, retry.ts (LLM infrastructure)
 │   ├── runners/        # analyzer.ts, generator.ts (generic runners)
-│   ├── prompts/        # Prompt templates
+│   ├── prompts/        # Prompt templates (analyzers, generators, system)
 │   ├── schemas/        # Shared LLM schemas
 │   ├── context.ts      # Context builder (accepts ContextConfig per aspect)
 │   ├── presets.ts      # TASK_PRESETS + PROVIDER_PROFILES
@@ -110,6 +156,10 @@ src/
 │   ├── health-check.ts
 │   ├── planners/       # docs.ts, steps.ts (2-pass step planner)
 │   └── prompt-gen/     # Prompt generation phase
+│       ├── index.ts            # Orchestrates step generation
+│       ├── resolve-environment.ts  # EnvironmentProfile resolution
+│       ├── context-injector.ts     # Builds per-step context from analysis + docs
+│       └── generators/         # Per-step-type prompt generators
 ├── source/             # Extraction: file-scanner, code-extractor, config-extractor, tech-stack-detector, repo-resolver
 ├── types/              # Type definitions (imported as @defs/*)
 └── utils/              # fs.ts, logger.ts, etc.
@@ -119,9 +169,12 @@ src/
 
 1. **Health Check** — Validates repository before processing
 2. **Phase 1: Extraction** — Scans files, extracts code chunks, configs, and tech stack
-3. **Phase 2: Analysis** — Runs all aspect analyzers concurrently (limit: 3), then synthesizes essence
-4. **Phase 3: Documentation** — Generates markdown docs per aspect
-5. **Phase 4: Prompt Generation** — Creates AI coding prompts from analysis + docs
+3. **Phase 2: Analysis** — Runs 7 aspect analyzers concurrently (limit: 3), then synthesizes design essence
+4. **Phase 3: Documentation** — Generates markdown docs per aspect (core + dynamic)
+5. **Phase 4: Prompt Generation**:
+   - `resolveEnvironment()` — Derives `EnvironmentProfile` from `TechStack`
+   - `planSteps()` — 2-pass step planner with symbolic dependency resolution
+   - For each step: `injectContext()` → `generator(analysis, context, env)` → LLM call → `assemblePromptStep()`
 
 ## Common Commands
 
