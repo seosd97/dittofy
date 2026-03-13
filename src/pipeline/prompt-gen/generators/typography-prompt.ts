@@ -1,5 +1,5 @@
 import type { AnalysisResult } from "@defs/analysis.js"
-import type { PromptStep } from "@defs/prompts.js"
+import type { PromptStep, StepPlanEntry } from "@defs/prompts.js"
 import { callLLM } from "@llm/core/client.js"
 import { PROMPT_GENERATOR_CONFIG } from "@llm/prompts/generators.js"
 import { buildSystemPrompt } from "@llm/prompts/system.js"
@@ -11,13 +11,13 @@ import { buildEnvironmentSection } from "../resolve-environment.js"
 import { assemblePromptStep } from "./utils.js"
 
 export async function generateTypographyPrompt(
-	analysis: AnalysisResult,
+	step: StepPlanEntry,
 	context: string,
 	env: EnvironmentProfile,
 	model: LanguageModel,
 	usage: UsageTracker,
-	stepNumber: number,
-	dependencies: number[],
+	stepTitles: Map<number, string>,
+	analysis: AnalysisResult,
 ): Promise<PromptStep> {
 	const system = buildSystemPrompt(PROMPT_GENERATOR_CONFIG)
 	const prompt = buildTypographyPromptText(analysis, context, env)
@@ -34,13 +34,14 @@ export async function generateTypographyPrompt(
 
 	usage.record("prompt-gen", "typography-prompt", result.usage)
 
-	const paddedNum = String(stepNumber).padStart(2, "0")
+	const paddedNum = String(step.stepNumber).padStart(2, "0")
 	return assemblePromptStep(
-		stepNumber,
+		step.stepNumber,
 		`step-${paddedNum}-typography.md`,
 		"Typography",
-		dependencies,
+		step.dependencies,
 		result.data,
+		{ stepType: "typography", stepTitles },
 	)
 }
 

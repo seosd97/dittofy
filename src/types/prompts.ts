@@ -6,6 +6,7 @@ export interface PromptSet {
 
 export interface PromptStep {
 	stepNumber: number
+	stepType: StepType
 	filename: string
 	title: string
 	content: string

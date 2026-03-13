@@ -1,5 +1,6 @@
 import { COMPLEXITY_THRESHOLDS } from "@config/analysis.js"
-import type { PromptStep } from "@defs/prompts.js"
+import type { PromptStep, StepType } from "@defs/prompts.js"
+import { buildArtifactsSection, buildContractSection } from "../step-contracts.js"
 
 export function assemblePromptStep(
 	stepNumber: number,
@@ -15,11 +16,18 @@ export function assemblePromptStep(
 		expectedOutcome: string
 		validation: string
 	},
+	options: {
+		stepType: StepType
+		stepTitles?: Map<number, string>
+	},
 ): PromptStep {
-	const prerequisitesText =
-		dependencies.length > 0
+	const prerequisitesText = options.stepTitles
+		? buildContractSection(options.stepType, dependencies, options.stepTitles)
+		: dependencies.length > 0
 			? `Complete steps ${dependencies.join(", ")} before starting this step.`
 			: "No prerequisites. This is the first step."
+
+	const artifactsText = `\n\n${buildArtifactsSection(options.stepType)}`
 
 	const content = `# Step ${stepNumber}: ${title}
 
@@ -39,7 +47,7 @@ ${data.instructions}
 ${data.designReference}
 
 ## Expected Outcome
-${data.expectedOutcome}
+${data.expectedOutcome}${artifactsText}
 
 ## Validation
 ${data.validation}
@@ -47,6 +55,7 @@ ${data.validation}
 
 	return {
 		stepNumber,
+		stepType: options.stepType,
 		filename,
 		title,
 		content,

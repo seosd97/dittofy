@@ -1,3 +1,4 @@
+import type { AnalysisResult } from "@defs/analysis.js"
 import type { PromptStep, StepPlanEntry } from "@defs/prompts.js"
 import { callLLM } from "@llm/core/client.js"
 import { PROMPT_GENERATOR_CONFIG } from "@llm/prompts/generators.js"
@@ -15,6 +16,8 @@ export async function generateInteractionsPrompt(
 	env: EnvironmentProfile,
 	model: LanguageModel,
 	usage: UsageTracker,
+	stepTitles: Map<number, string>,
+	_analysis: AnalysisResult,
 ): Promise<PromptStep> {
 	const system = buildSystemPrompt(PROMPT_GENERATOR_CONFIG)
 	const prompt = buildInteractionsPromptText(step, context, env)
@@ -34,7 +37,10 @@ export async function generateInteractionsPrompt(
 	const paddedNum = String(step.stepNumber).padStart(2, "0")
 	const filename = `step-${paddedNum}-interactions.md`
 
-	return assemblePromptStep(step.stepNumber, filename, step.title, step.dependencies, result.data)
+	return assemblePromptStep(step.stepNumber, filename, step.title, step.dependencies, result.data, {
+		stepType: "interactions",
+		stepTitles,
+	})
 }
 
 function buildInteractionsPromptText(

@@ -37,6 +37,9 @@ export async function runPromptGeneration(
 	logger.info(`Planned ${stepPlan.totalSteps} implementation steps`)
 
 	const steps: PromptStep[] = []
+	const stepTitles = new Map<number, string>(
+		stepPlan.steps.map((s) => [s.stepNumber, s.title]),
+	)
 
 	for (const planEntry of stepPlan.steps) {
 		const context = injectContext(planEntry, analysis, documents)
@@ -46,45 +49,32 @@ export async function runPromptGeneration(
 
 			switch (planEntry.stepType) {
 				case "setup":
-					step = await generateSetupPrompt(analysis, context, env, model, usage)
+					step = await generateSetupPrompt(planEntry, context, env, model, usage, stepTitles, analysis)
 					break
 				case "design-tokens":
-					step = await generateDesignTokensPrompt(
-						analysis,
-						context,
-						env,
-						model,
-						usage,
-						planEntry.stepNumber,
-						planEntry.dependencies,
-					)
+					step = await generateDesignTokensPrompt(planEntry, context, env, model, usage, stepTitles, analysis)
 					break
 				case "typography":
-					step = await generateTypographyPrompt(
-						analysis,
-						context,
-						env,
-						model,
-						usage,
-						planEntry.stepNumber,
-						planEntry.dependencies,
-					)
+					step = await generateTypographyPrompt(planEntry, context, env, model, usage, stepTitles, analysis)
 					break
 				case "layout-shell":
-					step = await generateLayoutShellPrompt(planEntry, context, env, model, usage)
+					step = await generateLayoutShellPrompt(planEntry, context, env, model, usage, stepTitles, analysis)
 					break
 				case "showcase-pages":
-					step = await generateShowcasePagesPrompt(planEntry, context, env, model, usage)
+					step = await generateShowcasePagesPrompt(planEntry, context, env, model, usage, stepTitles, analysis)
 					break
 				case "responsive":
-					step = await generateResponsivePrompt(planEntry, context, env, model, usage)
+					step = await generateResponsivePrompt(planEntry, context, env, model, usage, stepTitles, analysis)
 					break
 				case "interactions":
-					step = await generateInteractionsPrompt(planEntry, context, env, model, usage)
+					step = await generateInteractionsPrompt(planEntry, context, env, model, usage, stepTitles, analysis)
 					break
-				default:
-					logger.warn(`Unknown step type: ${planEntry.stepType}, skipping`)
+				default: {
+					const message = `Unknown step type: ${planEntry.stepType}, skipping`
+					logger.warn(message)
+					errors.push({ phase: "prompt-gen", message })
 					continue
+				}
 			}
 
 			steps.push(step)
@@ -112,7 +102,7 @@ export async function runPromptGeneration(
 		outputDir,
 	}
 
-	promptSet.readme = generateReadme(promptSet)
+	promptSet.readme = generateReadme(promptSet, env)
 	await writePrompts(promptSet)
 
 	phaseSuccess("Phase 4", `Generated ${steps.length} implementation prompts`)

@@ -1,5 +1,5 @@
 import type { AnalysisResult } from "@defs/analysis.js"
-import type { PromptStep } from "@defs/prompts.js"
+import type { PromptStep, StepPlanEntry } from "@defs/prompts.js"
 import { callLLM } from "@llm/core/client.js"
 import { PROMPT_GENERATOR_CONFIG } from "@llm/prompts/generators.js"
 import { buildSystemPrompt } from "@llm/prompts/system.js"
@@ -11,11 +11,13 @@ import { buildEnvironmentSection } from "../resolve-environment.js"
 import { assemblePromptStep } from "./utils.js"
 
 export async function generateSetupPrompt(
-	analysis: AnalysisResult,
+	step: StepPlanEntry,
 	context: string,
 	env: EnvironmentProfile,
 	model: LanguageModel,
 	usage: UsageTracker,
+	stepTitles: Map<number, string>,
+	analysis: AnalysisResult,
 ): Promise<PromptStep> {
 	const system = buildSystemPrompt(PROMPT_GENERATOR_CONFIG)
 	const prompt =
@@ -35,7 +37,15 @@ export async function generateSetupPrompt(
 
 	usage.record("prompt-gen", "setup-prompt", result.usage)
 
-	return assemblePromptStep(1, "step-01-project-setup.md", "Project Setup", [], result.data)
+	const paddedNum = String(step.stepNumber).padStart(2, "0")
+	return assemblePromptStep(
+		step.stepNumber,
+		`step-${paddedNum}-project-setup.md`,
+		"Project Setup",
+		step.dependencies,
+		result.data,
+		{ stepType: "setup", stepTitles },
+	)
 }
 
 function buildExistingProjectPrompt(
