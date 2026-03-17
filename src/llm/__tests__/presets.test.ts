@@ -19,9 +19,9 @@ describe("resolveCallConfig", () => {
 	})
 
 	it("applies zai multipliers for heavy presets", () => {
-		const result = resolveCallConfig("docGenerator", "zai")
-		expect(result.maxOutputTokens).toBe(Math.round(16384 * 1.5)) // 24576
-		expect(result.timeoutMs).toBe(Math.round(300_000 * 2.0)) // 600000
+		const result = resolveCallConfig("essenceSynthesizer", "zai")
+		expect(result.maxOutputTokens).toBe(Math.round(8192 * 1.5)) // 12288
+		expect(result.timeoutMs).toBe(Math.round(180_000 * 2.0)) // 360000
 	})
 
 	it("temperature is never multiplied", () => {

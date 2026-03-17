@@ -1,5 +1,9 @@
 import type { TechStack } from "@defs/analysis.js"
 import { logger } from "@utils/logger.js"
+import {
+	type ProjectStructure,
+	resolveProjectStructure,
+} from "./resolve-structure.js"
 
 export interface EnvironmentProfile {
 	/** Whether the target is an existing project or a new one */
@@ -18,6 +22,8 @@ export interface EnvironmentProfile {
 	tokenStrategy: string
 	/** Human-readable summary line for prompt injection */
 	summary: string
+	/** Conventional file/directory structure for this environment */
+	structure: ProjectStructure
 }
 
 /**
@@ -39,9 +45,7 @@ export function resolveEnvironment(techStack: TechStack): EnvironmentProfile {
 
 	const summary = buildSummaryLine(mode, framework, language, styling, buildTool)
 
-	logger.info(`Environment: ${mode} — ${summary}`)
-
-	return {
+	const env: EnvironmentProfile = {
 		mode,
 		framework,
 		language,
@@ -50,7 +54,14 @@ export function resolveEnvironment(techStack: TechStack): EnvironmentProfile {
 		uiLibrary,
 		tokenStrategy,
 		summary,
+		structure: undefined as unknown as ProjectStructure,
 	}
+
+	env.structure = resolveProjectStructure(env)
+
+	logger.info(`Environment: ${mode} — ${summary}`)
+
+	return env
 }
 
 function resolveTokenStrategy(styling: string): string {

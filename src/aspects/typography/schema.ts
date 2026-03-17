@@ -1,4 +1,5 @@
 import { confidenceLevelSchema, confident } from "@llm/schemas/common.js"
+import { consistencyMetricsSchema } from "@llm/schemas/consistency.js"
 import { z } from "zod"
 
 export const typographyScaleSchema = z.object({
@@ -16,15 +17,34 @@ const tokenValueSchema = z.object({
 	confidence: confidenceLevelSchema,
 })
 
+export const fontFamilyDefSchema = z.object({
+	name: z.string(),
+	category: z.enum(["sans-serif", "serif", "monospace", "display"]),
+	fallbackStack: z.string().describe("Full CSS fallback stack"),
+	usage: z.string().describe("Where this family is used: headings, body, code, etc."),
+	confidence: confidenceLevelSchema,
+})
+
+export const letterSpacingSchema = z.object({
+	name: z.string(),
+	value: z.string(),
+	usage: z.string(),
+	confidence: confidenceLevelSchema,
+})
+
+export const responsiveFontScaleSchema = z.object({
+	breakpoint: z.string(),
+	scaleFactor: z.number().describe("Multiplier relative to base, e.g., 0.85 for mobile"),
+	description: z.string(),
+})
+
 export const typographySystemSchema = z.object({
 	fontFamilies: confident(z.array(z.string())),
 	scale: z.array(typographyScaleSchema),
 	lineHeights: z.array(tokenValueSchema),
 	fontWeights: z.array(tokenValueSchema),
-})
-
-export const typographyDocSchema = z.object({
-	fontFamilies: z.string().default("").describe("Font families section"),
-	typeScale: z.string().default("").describe("Type scale section with table"),
-	principles: z.string().default("").describe("Typography principles section"),
+	fontFamilyDefs: z.array(fontFamilyDefSchema).optional(),
+	letterSpacings: z.array(letterSpacingSchema).optional(),
+	responsiveScaling: z.array(responsiveFontScaleSchema).optional(),
+	consistency: consistencyMetricsSchema.optional(),
 })

@@ -1,9 +1,8 @@
 import { defineAspect } from "@aspects/define-aspect.js"
-import type { AnalysisResult, PageStructures } from "@defs/analysis.js"
+import type { AnalysisResult } from "@defs/analysis.js"
 import type { StepDeclaration } from "@defs/descriptor.js"
-import { assembleMarkdown } from "@output/markdown.js"
-import { PAGE_ANALYZER_CONFIG, buildPagesDocPrompt } from "./prompts.js"
-import { pageStructuresSchema, pagesDocSchema } from "./schema.js"
+import { PAGE_ANALYZER_CONFIG } from "./prompts.js"
+import { pageStructuresSchema } from "./schema.js"
 
 export const pagesAspect = defineAspect({
 	name: "pageStructures",
@@ -19,24 +18,6 @@ export const pagesAspect = defineAspect({
 			mustIncludePatterns: [],
 		},
 		promptConfig: PAGE_ANALYZER_CONFIG,
-	},
-
-	docGenerator: {
-		filename: "05-page-structures.md",
-		title: "Page Structures",
-		category: "dynamic",
-		schema: pagesDocSchema,
-		schemaName: "pagesDoc",
-		schemaDescription: "Page structures document",
-		canGenerate: (data: PageStructures) => data.pages.length > 0,
-		buildPrompt: buildPagesDocPrompt,
-		assembleDoc: (title, data) => {
-			const d = data as { overview: string; pageDetails: string }
-			return assembleMarkdown(title, [
-				{ title: "Overview", content: d.overview },
-				{ title: "Page Details", content: d.pageDetails },
-			])
-		},
 	},
 
 	planning: {

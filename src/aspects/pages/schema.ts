@@ -1,5 +1,20 @@
 import { confidenceLevelSchema } from "@llm/schemas/common.js"
+import { consistencyMetricsSchema } from "@llm/schemas/consistency.js"
 import { z } from "zod"
+
+export const sectionInfoSchema = z.object({
+	name: z.string(),
+	hierarchyWeight: z.enum(["primary", "secondary", "tertiary"]).optional(),
+	flowRelation: z.enum(["hero", "content", "cta", "footer", "sidebar", "auxiliary"]).optional(),
+	components: z.array(z.string()).optional(),
+})
+
+export const pagePatternSchema = z.object({
+	name: z.string().describe("e.g., landing, dashboard, detail, list"),
+	description: z.string(),
+	sectionFlow: z.array(z.string()).describe("Ordered section types"),
+	confidence: confidenceLevelSchema,
+})
 
 export const pageInfoSchema = z.object({
 	name: z.string(),
@@ -8,13 +23,11 @@ export const pageInfoSchema = z.object({
 	sections: z.array(z.string()),
 	components: z.array(z.string()),
 	confidence: confidenceLevelSchema,
+	sectionDetails: z.array(sectionInfoSchema).optional(),
 })
 
 export const pageStructuresSchema = z.object({
 	pages: z.array(pageInfoSchema),
-})
-
-export const pagesDocSchema = z.object({
-	overview: z.string().default("").describe("Pages overview"),
-	pageDetails: z.string().default("").describe("Detailed page-by-page section breakdown"),
+	patterns: z.array(pagePatternSchema).optional(),
+	consistency: consistencyMetricsSchema.optional(),
 })

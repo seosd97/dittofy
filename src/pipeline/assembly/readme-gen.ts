@@ -1,6 +1,6 @@
 import type { PromptSet, StepType } from "@defs/prompts.js"
-import type { EnvironmentProfile } from "../resolve-environment.js"
-import { getStepContract } from "../step-contracts.js"
+import type { EnvironmentProfile } from "./resolve-environment.js"
+import { getStepContract } from "./step-contracts.js"
 
 /** Step types in canonical order for contract summary */
 const STEP_TYPE_ORDER: StepType[] = [

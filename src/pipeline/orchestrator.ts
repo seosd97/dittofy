@@ -4,13 +4,11 @@ import type { AnalysisResult } from "@defs/analysis.js"
 import type { AnalysisResultMap, AspectName } from "@defs/aspect-map.js"
 import type { DittoConfig } from "@defs/config.js"
 import type { AspectDescriptor } from "@defs/descriptor.js"
-import type { DocumentEntry, DocumentSet } from "@defs/documentation.js"
 import { UserError } from "@defs/errors.js"
 import type { PhaseError } from "@defs/pipeline.js"
 import { setLLMProvider } from "@llm/core/client.js"
 import { createModel } from "@llm/core/provider.js"
 import { runAnalyzer } from "@llm/runners/analyzer.js"
-import { runDocGenerator } from "@llm/runners/generator.js"
 import { UsageTracker } from "@llm/usage.js"
 import { writeDocuments } from "@output/docs.js"
 import { writePrompts } from "@output/prompts.js"
@@ -18,6 +16,7 @@ import { type ExtractionOutput, runExtraction } from "@source/index.js"
 import { resolveRepo } from "@source/repo-resolver.js"
 import { ensureDir, writeFileContent } from "@utils/fs.js"
 import { logger, phaseFail, phaseStart, phaseSuccess } from "@utils/logger.js"
+import { assembleDocuments, assemblePrompts, resolveEnvironment } from "./assembly/index.js"
 import { createPipelineContext } from "./context.js"
 import { synthesizeEssence } from "./essence.js"
 import { runHealthCheck } from "./health-check.js"
@@ -218,64 +217,33 @@ export async function runPipeline(source: string, config: DittoConfig): Promise<
 			JSON.stringify(analysisResult, null, 2),
 		)
 
-		// Phase 3: Documentation — registry-driven
-		let documentSet: DocumentSet | undefined
+		// Resolve environment (used by Phase 3 + 4)
+		const env = resolveEnvironment(extraction.techStack)
+
+		// Phase 3: Documentation — template-based (no LLM)
 		if (!config.promptsOnly) {
-			phaseStart("Phase 3", "Generating documentation")
+			phaseStart("Phase 3", "Generating documentation from templates")
 			const docOutputDir = resolve(ctx.outputDir, "design-spec")
-			const documents: DocumentEntry[] = []
 
-			for (const name of ASPECT_NAMES) {
-				const descriptor = ASPECT_REGISTRY[name]
-				const data = analysisResults[name]
-				if (!data) continue
-				if (!descriptor.docGenerator.canGenerate(data as never)) continue
-
-				try {
-					const doc = await runDocGenerator(
-						descriptor as AspectDescriptor<typeof name>,
-						data as never,
-						essence,
-						model,
-						usage,
-						config.language,
-					)
-					documents.push(doc)
-					logger.debug(`Generated: ${doc.filename}`)
-				} catch (error) {
-					const message = error instanceof Error ? error.message : String(error)
-					errors.push({ phase: `${descriptor.displayName} Doc`, message, cause: error })
-					logger.warn(`Failed to generate ${descriptor.displayName} doc: ${message}`)
-				}
-			}
-
-			documentSet = { documents, outputDir: docOutputDir }
+			const documentSet = assembleDocuments(analysisResult, env, config.language, docOutputDir)
 			await writeDocuments(documentSet)
 
-			if (documents.length === 0) {
-				phaseFail("Phase 3", "All document generators failed")
+			if (documentSet.documents.length === 0) {
+				phaseFail("Phase 3", "No documents generated (all templates returned null)")
 			} else {
-				phaseSuccess("Phase 3", `Generated ${documents.length} documents`)
+				phaseSuccess("Phase 3", `Generated ${documentSet.documents.length} documents`)
 			}
 		}
 
-		// Phase 4: Prompt Generation
+		// Phase 4: Prompt Generation — template-based (no LLM)
 		if (!config.docsOnly) {
-			try {
-				const { runPromptGeneration } = await import("./prompt-gen/index.js")
-				const promptOutputDir = resolve(ctx.outputDir, "prompts")
-				const docSet = documentSet ?? { documents: [], outputDir: "" }
-				const phase4Result = await runPromptGeneration(
-					analysisResult,
-					docSet,
-					model,
-					usage,
-					promptOutputDir,
-				)
+			phaseStart("Phase 4", "Generating implementation prompts from templates")
+			const promptOutputDir = resolve(ctx.outputDir, "prompts")
 
-				if (phase4Result.errors.length > 0) {
-					errors.push(...phase4Result.errors)
-				}
+			try {
+				const promptSet = assemblePrompts(analysisResult, env, config.language, promptOutputDir)
+				await writePrompts(promptSet)
+				phaseSuccess("Phase 4", `Generated ${promptSet.steps.length} implementation prompts`)
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error)
 				phaseFail("Phase 4", `Prompt generation failed: ${message}`)

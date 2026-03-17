@@ -18,10 +18,6 @@ export const TASK_PRESETS = {
 	responsiveAnalyzer: { temperature: 0.1, maxOutputTokens: 4096, baseTimeoutMs: 120_000 },
 	interactionAnalyzer: { temperature: 0.2, maxOutputTokens: 4096, baseTimeoutMs: 120_000 },
 	essenceSynthesizer: { temperature: 0.3, maxOutputTokens: 8192, baseTimeoutMs: 180_000 },
-	// Phase 3: Documentation
-	docGenerator: { temperature: 0.3, maxOutputTokens: 16384, baseTimeoutMs: 300_000 },
-	// Phase 4: Prompt Generation
-	promptGenerator: { temperature: 0.2, maxOutputTokens: 16384, baseTimeoutMs: 300_000 },
 } as const satisfies Record<string, TaskPreset>
 
 export type PresetName = keyof typeof TASK_PRESETS
