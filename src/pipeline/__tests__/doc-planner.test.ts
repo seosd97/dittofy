@@ -76,10 +76,10 @@ describe("planDocuments", () => {
 		expect(overview?.include).toBe(true)
 	})
 
-	it("excludes dynamic documents when no data exists", () => {
+	it("includes dynamic documents in plan (filtering now handled by templates)", () => {
 		const plan = planDocuments(createMinimalAnalysis())
-		// All dynamic docs should be excluded since arrays are empty
-		expect(plan.dynamicDocuments.every((d) => !d.include)).toBe(true)
+		// Dynamic docs are always included in the plan; actual filtering is done by templates returning null
+		expect(plan.dynamicDocuments.every((d) => d.include)).toBe(true)
 	})
 
 	it("includes page structures when pages exist", () => {

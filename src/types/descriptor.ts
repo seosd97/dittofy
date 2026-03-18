@@ -1,5 +1,4 @@
 import type { z } from "zod"
-import type { DesignEssence } from "./analysis.js"
 import type { AnalysisResult } from "./analysis.js"
 import type { AspectName, AspectTypeMap } from "./aspect-map.js"
 import type { FileCategory } from "./extraction.js"
@@ -14,8 +13,6 @@ export type PresetName =
 	| "responsiveAnalyzer"
 	| "interactionAnalyzer"
 	| "essenceSynthesizer"
-	| "docGenerator"
-	| "promptGenerator"
 
 /** Analyzer에 전달할 컨텍스트 설정 */
 export interface ContextConfig {
@@ -66,19 +63,6 @@ export interface AspectDescriptor<K extends AspectName> {
 		schemaDescription: string
 		contextConfig: ContextConfig
 		promptConfig: SystemPromptConfig
-	}
-
-	/** Doc Generator 설정 */
-	docGenerator: {
-		filename: string
-		title: string
-		category: "core" | "dynamic"
-		schema: z.ZodType
-		schemaName: string
-		schemaDescription: string
-		canGenerate: (data: AspectTypeMap[K]) => boolean
-		buildPrompt: (data: AspectTypeMap[K], essence: DesignEssence, lang: "ko" | "en") => string
-		assembleDoc: (title: string, data: unknown) => string
 	}
 
 	/** Step Planning 설정 */

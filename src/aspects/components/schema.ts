@@ -1,4 +1,5 @@
 import { confidenceLevelSchema } from "@llm/schemas/common.js"
+import { consistencyMetricsSchema } from "@llm/schemas/consistency.js"
 import { z } from "zod"
 
 export const propInfoSchema = z.object({
@@ -6,6 +7,33 @@ export const propInfoSchema = z.object({
 	type: z.string(),
 	required: z.boolean(),
 	defaultValue: z.string().optional(),
+})
+
+export const variantSpecSchema = z.object({
+	name: z.string(),
+	description: z.string(),
+	visualDiff: z.string().optional().describe("How this variant looks different from default"),
+})
+
+export const componentStateSchema = z.object({
+	name: z.enum(["default", "hover", "active", "focus", "disabled", "loading", "error"]),
+	description: z.string(),
+})
+
+export const sizeSpecSchema = z.object({
+	name: z.string().describe("e.g., sm, md, lg"),
+	dimensions: z.string().optional().describe("Approximate size values"),
+})
+
+export const accessibilityInfoSchema = z.object({
+	role: z.string().optional().describe("ARIA role"),
+	keyboardInteraction: z.string().optional(),
+	screenReaderNotes: z.string().optional(),
+})
+
+export const componentTokenBindingSchema = z.object({
+	tokenCategory: z.string().describe("e.g., colors, spacing, borderRadius"),
+	tokenNames: z.array(z.string()).describe("Token names used by this component"),
 })
 
 export const componentInfoSchema = z.object({
@@ -21,6 +49,11 @@ export const componentInfoSchema = z.object({
 	variants: z.array(z.string()),
 	description: z.string().describe("Visual character and design intent"),
 	confidence: confidenceLevelSchema,
+	variantSpecs: z.array(variantSpecSchema).optional(),
+	states: z.array(componentStateSchema).optional(),
+	sizes: z.array(sizeSpecSchema).optional(),
+	accessibility: accessibilityInfoSchema.optional(),
+	tokenBindings: z.array(componentTokenBindingSchema).optional(),
 })
 
 export const componentPatternSchema = z.object({
@@ -33,13 +66,5 @@ export const componentPatternSchema = z.object({
 export const componentCatalogSchema = z.object({
 	components: z.array(componentInfoSchema),
 	patterns: z.array(componentPatternSchema),
-})
-
-export const componentsDocSchema = z.object({
-	overview: z.string().default("").describe("Component catalog overview"),
-	componentList: z
-		.string()
-		.default("")
-		.describe("Detailed component list with variants and design notes"),
-	patterns: z.string().default("").describe("Component composition patterns"),
+	consistency: consistencyMetricsSchema.optional(),
 })

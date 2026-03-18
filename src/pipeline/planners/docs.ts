@@ -32,15 +32,6 @@ export function planDocuments(analysis: AnalysisResult): DocumentPlan {
 			if (doc.category === "core") {
 				coreDocuments.push(entry)
 			} else {
-				// For dynamic docs, also check canGenerate
-				const data = analysis[name as keyof AnalysisResult]
-				if (data && !isFailed) {
-					const canGen = descriptor.docGenerator.canGenerate(data as never)
-					entry.include = canGen
-					if (!canGen) {
-						entry.reason = `Skipped: insufficient data for ${doc.title}`
-					}
-				}
 				dynamicDocuments.push(entry)
 			}
 		}

@@ -3,7 +3,7 @@ import type { TechStack } from "@defs/analysis.js"
 import {
 	buildEnvironmentSection,
 	resolveEnvironment,
-} from "@pipeline/prompt-gen/resolve-environment.js"
+} from "@pipeline/assembly/resolve-environment.js"
 
 function createTechStack(overrides: Partial<TechStack> = {}): TechStack {
 	return {
