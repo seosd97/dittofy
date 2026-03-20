@@ -8,6 +8,7 @@ export interface MonorepoContext {
 	rootPath: string
 	targetPath: string
 	targetRelative: string
+	depPaths: string[]
 }
 
 export interface ProjectMeta {

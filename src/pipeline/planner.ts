@@ -45,9 +45,21 @@ ${fileTree}
 ## Project Metadata
 ${projectMeta}
 
+## Instructions
 Create an analysis plan for extracting the design system from this project.
-Select 3-8 most relevant files per aspect. Include config files (tailwind.config.*, package.json, theme files) when relevant.
-Only include files that actually exist in the file tree above.`
+
+CRITICAL: In the fileSelection field, you MUST use EXACT file paths from the file tree above.
+Copy-paste paths directly from the tree — do NOT guess or invent paths.
+For example, if the tree shows "apps/web/src/styles/theme.css.ts (2.8KB)", use exactly "apps/web/src/styles/theme.css.ts".
+
+Select 3-8 most relevant files per aspect:
+- designTokens: config files (tailwind.config.*, theme.*, tokens.*), CSS/style files with variables
+- typography: font config files, global style files, text component files
+- componentCatalog: .tsx/.jsx/.vue component files
+- layoutSystem: layout files, app shell, navigation components
+- pageStructures: page/route files
+- responsiveStrategy: files with breakpoints, media queries, responsive utilities
+- interactionPatterns: files with animations, transitions, hover effects`
 
 	const result = await client.call({
 		preset: "analysisPlanner",

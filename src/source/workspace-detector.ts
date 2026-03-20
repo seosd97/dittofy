@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises"
+import { access, readFile, readdir } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 
 /**
@@ -30,4 +30,109 @@ export async function findMonorepoRoot(targetPath: string): Promise<string | nul
 	}
 
 	return null
+}
+
+/**
+ * Resolve workspace dependencies from target's package.json.
+ * Returns relative paths (from rootPath) of depended workspace packages.
+ */
+export async function resolveWorkspaceDeps(
+	targetPath: string,
+	rootPath: string,
+): Promise<string[]> {
+	// 1. Read target's package.json
+	const targetPkg = await readPackageJson(targetPath)
+	if (!targetPkg) return []
+
+	// 2. Find workspace:* deps
+	const allDeps = { ...targetPkg.dependencies, ...targetPkg.devDependencies }
+	const workspaceDeps = Object.entries(allDeps)
+		.filter(([_, version]) => typeof version === "string" && version.startsWith("workspace:"))
+		.map(([name]) => name)
+
+	if (workspaceDeps.length === 0) return []
+
+	// 3. Build a map of package name -> relative path by scanning workspace packages
+	const packageMap = await buildWorkspacePackageMap(rootPath)
+
+	// 4. Resolve dep names to paths
+	const resolved: string[] = []
+	for (const depName of workspaceDeps) {
+		const pkgPath = packageMap.get(depName)
+		if (pkgPath) {
+			resolved.push(pkgPath)
+		}
+	}
+
+	return resolved
+}
+
+/**
+ * Detect multiple apps in a monorepo.
+ * Returns app paths relative to root.
+ */
+export async function detectApps(rootPath: string): Promise<string[]> {
+	const apps: string[] = []
+	const appDirs = ["apps", "packages"]
+
+	for (const dir of appDirs) {
+		const dirPath = resolve(rootPath, dir)
+		try {
+			const entries = await readdir(dirPath, { withFileTypes: true })
+			for (const entry of entries) {
+				if (!entry.isDirectory()) continue
+				const pkg = await readPackageJson(resolve(dirPath, entry.name))
+				if (!pkg) continue
+				// An "app" typically has dev/start scripts or framework deps
+				const hasAppScript = pkg.scripts?.dev || pkg.scripts?.start || pkg.scripts?.build
+				const hasFramework = ["next", "react", "vue", "svelte", "nuxt", "astro"].some(
+					(fw) => fw in (pkg.dependencies ?? {}) || fw in (pkg.devDependencies ?? {}),
+				)
+				if (hasAppScript && hasFramework) {
+					apps.push(`${dir}/${entry.name}`)
+				}
+			}
+		} catch {
+			// Directory doesn't exist
+		}
+	}
+
+	return apps
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: package.json has dynamic structure
+async function readPackageJson(dirPath: string): Promise<Record<string, any> | null> {
+	try {
+		const content = await readFile(resolve(dirPath, "package.json"), "utf-8")
+		return JSON.parse(content)
+	} catch {
+		return null
+	}
+}
+
+/**
+ * Scan all workspace packages and build a map: package name -> relative path from root.
+ * Looks in common locations: packages/*, apps/*, libs/*, modules/*
+ */
+async function buildWorkspacePackageMap(rootPath: string): Promise<Map<string, string>> {
+	const map = new Map<string, string>()
+	const dirs = ["packages", "apps", "libs", "modules"]
+
+	for (const dir of dirs) {
+		const dirPath = resolve(rootPath, dir)
+		try {
+			const entries = await readdir(dirPath, { withFileTypes: true })
+			for (const entry of entries) {
+				if (!entry.isDirectory()) continue
+				const pkg = await readPackageJson(resolve(dirPath, entry.name))
+				if (pkg?.name) {
+					map.set(pkg.name, `${dir}/${entry.name}`)
+				}
+			}
+		} catch {
+			// Directory doesn't exist
+		}
+	}
+
+	return map
 }

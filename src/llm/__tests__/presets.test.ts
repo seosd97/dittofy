@@ -6,14 +6,14 @@ describe("resolveCallConfig", () => {
 	it("returns base values for openai (multipliers = 1.0)", () => {
 		const result = resolveCallConfig("tokenAnalyzer", "openai")
 		expect(result.temperature).toBe(0.1)
-		expect(result.maxOutputTokens).toBe(4096)
+		expect(result.maxOutputTokens).toBe(8192)
 		expect(result.timeoutMs).toBe(120_000)
 		expect(result.maxRetries).toBe(3)
 	})
 
 	it("applies zai multipliers", () => {
 		const result = resolveCallConfig("tokenAnalyzer", "zai")
-		expect(result.maxOutputTokens).toBe(Math.round(4096 * 1.5)) // 6144
+		expect(result.maxOutputTokens).toBe(Math.round(8192 * 1.5)) // 12288
 		expect(result.timeoutMs).toBe(Math.round(120_000 * 2.0)) // 240000
 		expect(result.maxRetries).toBe(2)
 	})

@@ -95,7 +95,7 @@ describe("buildContext", () => {
 		expect(fileCount).toBeLessThan(3)
 	})
 
-	it("prioritizes filePaths when provided", () => {
+	it("includes only filePaths when provided", () => {
 		const chunks: CodeChunk[] = [
 			makeChunk("src/A.tsx", "aaa"),
 			makeChunk("src/B.tsx", "bbb"),
@@ -106,9 +106,9 @@ describe("buildContext", () => {
 			filePaths: ["src/C.tsx"],
 		})
 
-		// C should appear first (primary), then A and B as remaining sorted by size
-		const cIdx = result.codeContext.indexOf("ccc")
-		const aIdx = result.codeContext.indexOf("aaa")
-		expect(cIdx).toBeLessThan(aIdx)
+		// Only C should be included (no remaining fill)
+		expect(result.codeContext).toContain("ccc")
+		expect(result.codeContext).not.toContain("aaa")
+		expect(result.codeContext).not.toContain("bbb")
 	})
 })

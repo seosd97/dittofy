@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@source/workspace-detector.js", () => ({
 	findMonorepoRoot: vi.fn().mockResolvedValue(null),
+	resolveWorkspaceDeps: vi.fn().mockResolvedValue([]),
+	detectApps: vi.fn().mockResolvedValue([]),
 }))
 
 vi.mock("@source/repo-resolver.js", () => ({
@@ -648,6 +650,7 @@ describe("orchestrator", () => {
 			expect(runExtraction).toHaveBeenCalledWith("/tmp/test-repo", {
 				rootPath: "/tmp/monorepo-root",
 				targetRelative: expect.any(String),
+				depPaths: [],
 			})
 		})
 

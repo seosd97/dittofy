@@ -9,7 +9,7 @@ import { writeDocuments } from "@output/docs.js"
 import { writePrompts } from "@output/prompts.js"
 import { type ExtractionOutput, runExtraction } from "@source/index.js"
 import { resolveRepo } from "@source/repo-resolver.js"
-import { findMonorepoRoot } from "@source/workspace-detector.js"
+import { detectApps, findMonorepoRoot, resolveWorkspaceDeps } from "@source/workspace-detector.js"
 import { ensureDir, readFileContent, writeFileContent } from "@utils/fs.js"
 import { logger, phaseFail, phaseStart, phaseSuccess } from "@utils/logger.js"
 import { renderAnalysisMarkdown } from "./assembly/analysis-renderer.js"
@@ -94,13 +94,51 @@ export async function runAnalysisPipeline(
 
 		// Detect monorepo
 		const monorepoRoot = await findMonorepoRoot(resolved.localPath)
-		const rootPath = monorepoRoot ?? resolved.localPath
-		const targetRelative = monorepoRoot ? relative(monorepoRoot, resolved.localPath) : ""
 		const isMonorepo = !!monorepoRoot
+		let rootPath = resolved.localPath
+		let targetRelative = ""
+		let depPackagePaths: string[] = []
 
-		if (isMonorepo) {
-			logger.info(`Monorepo detected: root=${monorepoRoot}`)
-			logger.info(`Target: ${targetRelative}`)
+		if (isMonorepo && monorepoRoot) {
+			const rootPath_m = monorepoRoot
+			const targetRelative_m = relative(rootPath_m, resolved.localPath)
+
+			logger.info(`Monorepo detected: root=${rootPath_m}`)
+			logger.info(`Target: ${targetRelative_m}`)
+
+			// Check if user pointed at the root itself (not a specific app)
+			if (targetRelative_m === "" || targetRelative_m === ".") {
+				const apps = await detectApps(rootPath_m)
+				if (apps.length > 1) {
+					const appList = apps.map((a) => `  - ${a}`).join("\n")
+					phaseFail(
+						"Phase 1",
+						`Multiple apps detected in monorepo. Please specify one:\n${appList}`,
+					)
+					return {
+						success: false,
+						analysisJsonPath: "",
+						outputDir: ctx.outputDir,
+						duration: Date.now() - startTime,
+						errors: [
+							{
+								phase: "Phase 1",
+								message: `Multiple apps: ${apps.join(", ")}`,
+							},
+						],
+					}
+				}
+			}
+
+			// Resolve workspace dependencies
+			const depPaths = await resolveWorkspaceDeps(resolved.localPath, rootPath_m)
+			if (depPaths.length > 0) {
+				logger.info(`Monorepo: workspace deps = ${depPaths.join(", ")}`)
+			}
+
+			rootPath = rootPath_m
+			targetRelative = targetRelative_m
+			depPackagePaths = depPaths
 		}
 
 		// Phase 1: Extraction
@@ -109,7 +147,7 @@ export async function runAnalysisPipeline(
 		try {
 			const phase1Result = await runExtraction(
 				resolved.localPath,
-				isMonorepo ? { rootPath, targetRelative } : undefined,
+				isMonorepo ? { rootPath, targetRelative, depPaths: depPackagePaths } : undefined,
 			)
 			extractionOutput = phase1Result.data
 
@@ -162,7 +200,33 @@ export async function runAnalysisPipeline(
 		}
 
 		// Write workspace files for planning
-		if (isMonorepo) {
+		if (isMonorepo && depPackagePaths.length > 0) {
+			// Dep-based tree: target files + dep package trees (already combined in fileTree)
+			const targetTree = extraction.extraction.fileTree.filter(
+				(n) => !depPackagePaths.includes(n.path),
+			)
+			const depNodes = extraction.extraction.fileTree.filter((n) =>
+				depPackagePaths.includes(n.path),
+			)
+
+			const lines: string[] = ["# Project Structure\n"]
+			lines.push(`## Target: ${targetRelative}`)
+			lines.push(renderFileTree(targetTree, "", 0))
+			lines.push("")
+
+			if (depNodes.length > 0) {
+				lines.push("## Related Packages")
+				for (const dep of depNodes) {
+					lines.push(`### ${dep.path}`)
+					if (dep.children) {
+						lines.push(renderFileTree(dep.children, "", 0))
+					}
+					lines.push("")
+				}
+			}
+
+			await workspace.writeMarkdown("file-tree.md", lines.filter(Boolean).join("\n"))
+		} else if (isMonorepo) {
 			await workspace.writeMarkdown(
 				"file-tree.md",
 				renderMonorepoTree(extraction.extraction.fileTree, targetRelative),
@@ -192,14 +256,22 @@ export async function runAnalysisPipeline(
 		}
 
 		// Validate file selection
-		const selectionValid = validateFileSelection(plan, extraction.extraction.fileTree)
+		const selectionValid = validateFileSelection(
+			plan,
+			extraction.extraction.fileTree,
+			targetRelative,
+		)
 		if (!selectionValid) {
 			logger.warn("File selection validation failed (<50% match). Using auto-selected files.")
 			plan.fileSelection = autoSelectFiles(extraction.extraction.fileTree, plan.aspects)
 		}
 
 		// Load selected files from disk (lazy loading — only what planner selected)
-		const codeChunks = await loadSelectedFiles(plan, rootPath)
+		const codeChunks = await loadSelectedFiles(
+			plan,
+			rootPath,
+			depPackagePaths.length > 0 ? depPackagePaths : undefined,
+		)
 		const hasFileSelection = Object.values(plan.fileSelection).some((files) => files.length > 0)
 
 		if (hasFileSelection && codeChunks.length === 0) {

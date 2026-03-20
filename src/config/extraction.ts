@@ -81,4 +81,21 @@ export const TREE_IGNORE_DIRS = new Set([
 	".storybook",
 	"cypress",
 	"e2e",
+	// AI tool configs
+	".agent",
+	".agents",
+	".claude",
+	".cursor",
+	".codex",
+	".opencode",
+	".tanstack",
+	".yarn",
+	".pnpm",
+	// Other non-source dirs
+	"public",
+	".github",
+	".husky",
+	"drizzle",
+	"deploy",
+	"charts",
 ])

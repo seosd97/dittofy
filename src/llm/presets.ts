@@ -10,7 +10,7 @@ export interface TaskPreset {
 
 export const TASK_PRESETS = {
 	// Phase 2: Analysis
-	tokenAnalyzer: { temperature: 0.1, maxOutputTokens: 4096, baseTimeoutMs: 120_000 },
+	tokenAnalyzer: { temperature: 0.1, maxOutputTokens: 8192, baseTimeoutMs: 120_000 },
 	typographyAnalyzer: { temperature: 0.1, maxOutputTokens: 4096, baseTimeoutMs: 120_000 },
 	componentAnalyzer: { temperature: 0.2, maxOutputTokens: 8192, baseTimeoutMs: 180_000 },
 	componentChunkAnalyzer: { temperature: 0.2, maxOutputTokens: 4096, baseTimeoutMs: 120_000 },

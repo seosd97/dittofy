@@ -58,7 +58,7 @@ export async function runAnalyzer<K extends AspectName>(
 
 	const crossCtx = options?.crossAspectContext ? `${options.crossAspectContext}\n\n` : ""
 
-	const prompt = `${crossCtx}## Project File Structure\n${context.fileStructure}\n\n## Source Code\n${context.codeContext}`
+	const prompt = `${crossCtx}## Source Code\n${context.codeContext}`
 
 	const result = await client.call({
 		preset: analyzer.preset,
@@ -90,7 +90,7 @@ async function runChunkedAnalysis<K extends AspectName>(
 
 	// 청크가 1개면 단일 호출로 fallback (오버헤드 방지)
 	if (chunks.length <= 1) {
-		const prompt = `${crossCtx}## Project File Structure\n${context.fileStructure}\n\n## Source Code\n${context.codeContext}`
+		const prompt = `${crossCtx}## Source Code\n${context.codeContext}`
 
 		const result = await client.call({
 			preset: descriptor.analyzer.preset,
@@ -106,7 +106,7 @@ async function runChunkedAnalysis<K extends AspectName>(
 
 	logger.info(`[${descriptor.displayName}] Chunked analysis: ${chunks.length} batches`)
 
-	const basePrompt = `${crossCtx}## Project File Structure\n${context.fileStructure}`
+	const basePrompt = `${crossCtx}`
 	const results: unknown[] = []
 
 	for (const chunk of chunks) {

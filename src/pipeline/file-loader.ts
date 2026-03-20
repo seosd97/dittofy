@@ -8,10 +8,14 @@ import type { AnalysisPlan } from "./plan-parser.js"
 /**
  * Load files selected by the planner from disk.
  * Lazy loading: no files are pre-read; only planner-selected files are loaded.
+ *
+ * For monorepo dep paths: files whose path starts with a dep package prefix
+ * are resolved from rootPath; all others resolve from rootPath (target).
  */
 export async function loadSelectedFiles(
 	plan: AnalysisPlan,
 	rootPath: string,
+	depPaths?: string[],
 ): Promise<CodeChunk[]> {
 	const allSelected = [...new Set(Object.values(plan.fileSelection).flat())]
 	const chunks: CodeChunk[] = []
@@ -22,7 +26,19 @@ export async function loadSelectedFiles(
 
 	for (const filePath of allSelected) {
 		try {
-			const fullPath = resolve(rootPath, filePath)
+			// For dep paths, resolve from rootPath (monorepo root)
+			// For target files, resolve from rootPath (which is monorepo root or target)
+			let fullPath: string | undefined
+			if (depPaths) {
+				for (const depPath of depPaths) {
+					if (filePath.startsWith(depPath)) {
+						fullPath = resolve(rootPath, filePath)
+						break
+					}
+				}
+			}
+			fullPath = fullPath ?? resolve(rootPath, filePath)
+
 			const fileStat = await stat(fullPath)
 			if (fileStat.size > 100 * 1024) {
 				logger.debug(`Skipping large file: ${filePath}`)
@@ -45,30 +61,95 @@ export async function loadSelectedFiles(
 }
 
 /**
- * Validate that planner-selected files actually exist in the file tree.
- * Removes invalid entries and warns. Returns false if <50% valid → trigger fallback.
+ * Validate and resolve planner-selected files against the file tree.
+ * Uses flexible matching: exact → suffix (target preferred) → reverse suffix → filename.
+ * Returns false if <50% resolved → trigger fallback.
  */
-export function validateFileSelection(plan: AnalysisPlan, fileTree: FileTreeNode[]): boolean {
+export function validateFileSelection(
+	plan: AnalysisPlan,
+	fileTree: FileTreeNode[],
+	targetRelative = "",
+): boolean {
 	const treeFiles = flattenTreePaths(fileTree)
+	const treeFileArr = [...treeFiles]
 	let totalSelected = 0
-	let totalValid = 0
+	let totalResolved = 0
 
 	for (const [aspect, files] of Object.entries(plan.fileSelection)) {
 		if (!files) continue
-		const valid = files.filter((f) => treeFiles.has(f))
-		const invalid = files.filter((f) => !treeFiles.has(f))
+		const resolved: string[] = []
 
-		if (invalid.length > 0) {
-			logger.warn(`Planner selected ${invalid.length} non-existent files for ${aspect}`)
+		for (const f of files) {
+			const match = resolveFilePath(f, treeFiles, treeFileArr, targetRelative)
+			if (match) {
+				resolved.push(match)
+				logger.debug(`  ✓ ${f}${match !== f ? ` → ${match}` : ""}`)
+			} else {
+				logger.warn(`  ✗ ${f} (not found in tree)`)
+			}
 		}
 
-		plan.fileSelection[aspect as AspectName] = valid
+		if (resolved.length < files.length) {
+			logger.warn(`${aspect}: ${files.length - resolved.length}/${files.length} files not found`)
+		}
+
+		plan.fileSelection[aspect as AspectName] = resolved
 		totalSelected += files.length
-		totalValid += valid.length
+		totalResolved += resolved.length
 	}
 
 	if (totalSelected === 0) return true
-	return totalValid / totalSelected >= 0.5
+	const matchRate = totalResolved / totalSelected
+	logger.info(
+		`File selection: ${totalResolved}/${totalSelected} resolved (${(matchRate * 100).toFixed(0)}%)`,
+	)
+	return matchRate >= 0.5
+}
+
+/**
+ * Resolve a planner-selected path against the tree using flexible matching:
+ * 1. Exact match
+ * 2. Suffix match (target package preferred when multiple candidates)
+ * 3. Reverse suffix (selected has extra prefix)
+ * 4. Filename-only (unique match only)
+ */
+function resolveFilePath(
+	selected: string,
+	treeFiles: Set<string>,
+	treeFileArr: string[],
+	targetRelative: string,
+): string | null {
+	// 1. Exact match
+	if (treeFiles.has(selected)) return selected
+
+	const lower = selected.toLowerCase()
+
+	// 2. Suffix match — find all candidates, prefer target package
+	const suffixMatches = treeFileArr.filter((t) => t.toLowerCase().endsWith(`/${lower}`))
+	if (suffixMatches.length === 1) return suffixMatches[0]
+	if (suffixMatches.length > 1) {
+		if (targetRelative) {
+			const targetMatch = suffixMatches.find((t) =>
+				t.toLowerCase().startsWith(targetRelative.toLowerCase()),
+			)
+			if (targetMatch) return targetMatch
+		}
+		return suffixMatches.sort((a, b) => a.length - b.length)[0]
+	}
+
+	// 3. Reverse suffix (selected has extra prefix like "apps/web/src/..." but tree has "src/...")
+	// Return the SELECTED path (not tree path) since it's root-relative and loadSelectedFiles needs it
+	const reverseSuffix = treeFileArr.filter((t) => lower.endsWith(`/${t.toLowerCase()}`))
+	if (reverseSuffix.length >= 1) return selected
+
+	// 4. Filename-only match (last resort, only if unique)
+	const filename = selected.split("/").pop()?.toLowerCase()
+	if (filename) {
+		const filenameMatches = treeFileArr.filter((t) => t.toLowerCase().split("/").pop() === filename)
+		if (filenameMatches.length === 1) return filenameMatches[0]
+	}
+
+	return null
 }
 
 /** Flatten file tree into a Set of full paths */
@@ -92,9 +173,41 @@ export function flattenTreePaths(tree: FileTreeNode[], prefix = ""): Set<string>
 
 const UI_EXTENSIONS = new Set([".tsx", ".jsx", ".vue", ".svelte", ".css", ".scss", ".ts", ".js"])
 
+/** Aspect-specific file matching patterns */
+const ASPECT_FILE_HINTS: Record<string, { pathHints: RegExp[]; extPriority: string[] }> = {
+	designTokens: {
+		pathHints: [/config/, /theme/, /token/, /variables/, /styles/, /\.css\.ts$/],
+		extPriority: [".css.ts", ".css", ".scss", ".ts"],
+	},
+	typography: {
+		pathHints: [/config/, /theme/, /font/, /typography/, /global/, /styles/],
+		extPriority: [".css.ts", ".css", ".scss", ".ts"],
+	},
+	componentCatalog: {
+		pathHints: [/component/, /ui\//, /atoms/, /molecules/],
+		extPriority: [".tsx", ".jsx", ".vue", ".svelte"],
+	},
+	layoutSystem: {
+		pathHints: [/layout/, /shell/, /header/, /footer/, /sidebar/, /nav/],
+		extPriority: [".tsx", ".jsx", ".css.ts", ".css"],
+	},
+	pageStructures: {
+		pathHints: [/page/, /app\//, /routes\//, /views\//],
+		extPriority: [".tsx", ".jsx", ".vue", ".svelte"],
+	},
+	responsiveStrategy: {
+		pathHints: [/config/, /breakpoint/, /responsive/, /media/, /styles/],
+		extPriority: [".css.ts", ".css", ".scss", ".ts"],
+	},
+	interactionPatterns: {
+		pathHints: [/animation/, /motion/, /transition/, /hover/, /component/],
+		extPriority: [".tsx", ".jsx", ".css.ts", ".css"],
+	},
+}
+
 /**
  * Auto-select files from tree when planner selection fails.
- * Picks UI-relevant files sorted by path (config-like files first, then components).
+ * Picks files per-aspect based on path hints and extension priorities.
  */
 export function autoSelectFiles(
 	fileTree: FileTreeNode[],
@@ -103,24 +216,68 @@ export function autoSelectFiles(
 ): Partial<Record<AspectName, string[]>> {
 	const allPaths = [...flattenTreePaths(fileTree)].filter((p) => {
 		const ext = extname(p).toLowerCase()
-		return UI_EXTENSIONS.has(ext)
+		return UI_EXTENSIONS.has(ext) || p.endsWith(".css.ts")
 	})
 
-	// Sort: config-like files first, then by path
-	allPaths.sort((a, b) => {
-		const aIsConfig = a.includes("config") || a.includes("theme") || a.includes("token") ? 0 : 1
-		const bIsConfig = b.includes("config") || b.includes("theme") || b.includes("token") ? 0 : 1
-		if (aIsConfig !== bIsConfig) return aIsConfig - bIsConfig
-		return a.localeCompare(b)
-	})
+	// Config-like files shared across all aspects
+	const configFiles = allPaths.filter(
+		(p) =>
+			p.includes("config") ||
+			p.includes("theme") ||
+			p.includes("token") ||
+			p.includes("package.json"),
+	)
 
 	const selection: Partial<Record<AspectName, string[]>> = {}
-	const shared = allPaths.slice(0, maxPerAspect)
 
 	for (const aspect of aspects) {
-		selection[aspect] = [...shared]
+		const hints = ASPECT_FILE_HINTS[aspect]
+		if (!hints) {
+			selection[aspect] = configFiles.slice(0, maxPerAspect)
+			continue
+		}
+
+		// Score files by relevance to this aspect
+		const scored = allPaths.map((p) => {
+			let score = 0
+			const lower = p.toLowerCase()
+
+			// Path hint matching
+			for (const hint of hints.pathHints) {
+				if (hint.test(lower)) score += 10
+			}
+
+			// Extension priority
+			const extIdx = hints.extPriority.findIndex((e) => lower.endsWith(e))
+			if (extIdx !== -1) score += 5 - extIdx
+
+			// Config bonus (always useful)
+			if (lower.includes("config") || lower.includes("theme") || lower.includes("token")) {
+				score += 3
+			}
+
+			return { path: p, score }
+		})
+
+		// Sort by score (highest first), take top N
+		scored.sort((a, b) => b.score - a.score)
+		const selected = scored
+			.filter((s) => s.score > 0)
+			.slice(0, maxPerAspect)
+			.map((s) => s.path)
+
+		// If not enough matched, add config files
+		if (selected.length < 3) {
+			for (const cf of configFiles) {
+				if (!selected.includes(cf)) selected.push(cf)
+				if (selected.length >= maxPerAspect) break
+			}
+		}
+
+		selection[aspect] = selected
 	}
 
-	logger.warn(`Auto-selected ${shared.length} files as fallback (planner selection failed)`)
+	const totalFiles = new Set(Object.values(selection).flat()).size
+	logger.warn(`Auto-selected ${totalFiles} files as fallback (planner selection failed)`)
 	return selection
 }

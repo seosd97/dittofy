@@ -24,36 +24,19 @@ export function buildContext(
 ): ContextBuildResult {
 	const tokenBudget = options?.tokenBudget ?? DEFAULT_TOKEN_BUDGET
 
-	// If filePaths provided, prioritize matched files
-	let primaryFiles: CodeChunk[]
-	let remainingFiles: CodeChunk[]
+	// Select files: if filePaths provided, use only those (planner-selected)
+	// Otherwise, use all codeChunks sorted by size within budget
+	const filesToSelect = options?.filePaths
+		? (() => {
+				const filePathSet = new Set(options.filePaths.map((p) => p.toLowerCase()))
+				return codeChunks.filter((c) => filePathSet.has(c.filePath.toLowerCase()))
+			})()
+		: [...codeChunks].sort((a, b) => a.size - b.size)
 
-	if (options?.filePaths) {
-		const filePathSet = new Set(options.filePaths.map((p) => p.toLowerCase()))
-		primaryFiles = codeChunks.filter((c) => filePathSet.has(c.filePath.toLowerCase()))
-		remainingFiles = codeChunks.filter((c) => !filePathSet.has(c.filePath.toLowerCase()))
-	} else {
-		primaryFiles = []
-		remainingFiles = [...codeChunks]
-	}
-
-	// Sort remaining by size (smaller first = more files fit)
-	remainingFiles.sort((a, b) => a.size - b.size)
-
-	// Select files within budget
 	const selected: CodeChunk[] = []
 	let usedTokens = 0
 
-	// Primary (planner-selected) files first
-	for (const chunk of primaryFiles) {
-		const tokens = estimateTokens(chunk.content)
-		if (usedTokens + tokens > tokenBudget) continue
-		selected.push(chunk)
-		usedTokens += tokens
-	}
-
-	// Fill remaining budget
-	for (const chunk of remainingFiles) {
+	for (const chunk of filesToSelect) {
 		if (selected.length >= MAX_FILES_PER_ANALYZER) break
 		const tokens = estimateTokens(chunk.content)
 		if (usedTokens + tokens > tokenBudget) continue

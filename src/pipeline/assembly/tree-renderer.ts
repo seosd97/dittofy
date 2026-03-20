@@ -184,6 +184,9 @@ export function renderProjectMeta(extraction: ExtractionOutput): string {
 		lines.push("## Monorepo")
 		lines.push(`- Root: ${extraction.monorepo.rootPath}`)
 		lines.push(`- Target: ${extraction.monorepo.targetRelative}`)
+		if (extraction.monorepo.depPaths.length > 0) {
+			lines.push(`- Workspace deps: ${extraction.monorepo.depPaths.join(", ")}`)
+		}
 	}
 
 	if (meta.dependencies && Object.keys(meta.dependencies).length > 0) {

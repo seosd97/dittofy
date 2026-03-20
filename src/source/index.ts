@@ -1,14 +1,19 @@
 import { access, readFile } from "node:fs/promises"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import type { TechStack } from "@defs/analysis.js"
-import type { ExtractionResult, MonorepoContext, ProjectMeta } from "@defs/extraction.js"
+import type {
+	ExtractionResult,
+	FileTreeNode,
+	MonorepoContext,
+	ProjectMeta,
+} from "@defs/extraction.js"
 import type { PhaseError, PhaseResult } from "@defs/pipeline.js"
 import { phaseFail, phaseStart, phaseSuccess } from "@utils/logger.js"
 import { buildFileTree, scanFiles } from "./file-scanner.js"
 import { detectTechStack } from "./tech-stack-detector.js"
 
 export { buildFileTree } from "./file-scanner.js"
-export { findMonorepoRoot } from "./workspace-detector.js"
+export { detectApps, findMonorepoRoot, resolveWorkspaceDeps } from "./workspace-detector.js"
 
 export interface ExtractionOutput {
 	extraction: ExtractionResult
@@ -18,7 +23,7 @@ export interface ExtractionOutput {
 
 export async function runExtraction(
 	repoPath: string,
-	monorepoInfo?: { rootPath: string; targetRelative: string },
+	monorepoInfo?: { rootPath: string; targetRelative: string; depPaths?: string[] },
 ): Promise<PhaseResult<ExtractionOutput>> {
 	const startTime = Date.now()
 	const errors: PhaseError[] = []
@@ -27,10 +32,32 @@ export async function runExtraction(
 		const scanResult = await scanFiles(repoPath)
 		phaseStart("Phase 1", `Scanned ${scanResult.stats.totalScanned} files`)
 
-		// File tree: from rootPath if monorepo (deeper depth), otherwise from repoPath
-		const fileTree = monorepoInfo
-			? await buildFileTree(monorepoInfo.rootPath, 0, 7)
-			: scanResult.fileTree
+		const depPaths = monorepoInfo?.depPaths ?? []
+
+		// File tree: target's own tree + dependency package trees
+		let fileTree = scanResult.fileTree
+
+		if (monorepoInfo && depPaths.length > 0) {
+			// Add dependency package trees alongside target tree
+			const depNodes: FileTreeNode[] = []
+			for (const depPath of depPaths) {
+				try {
+					const fullDepPath = resolve(monorepoInfo.rootPath, depPath)
+					const depTree = await buildFileTree(fullDepPath)
+					depNodes.push({
+						path: depPath,
+						type: "directory" as const,
+						children: depTree,
+					})
+				} catch {
+					// Skip unreadable dep
+				}
+			}
+			fileTree = [...fileTree, ...depNodes]
+		} else if (monorepoInfo) {
+			// No dep paths: build from rootPath (legacy behavior)
+			fileTree = await buildFileTree(monorepoInfo.rootPath, 0, 7)
+		}
 
 		const projectMeta = await buildProjectMeta(repoPath)
 		const techStack = detectTechStack(projectMeta)
@@ -48,6 +75,7 @@ export async function runExtraction(
 			rootPath,
 			targetPath: repoPath,
 			targetRelative,
+			depPaths,
 		}
 
 		return {
