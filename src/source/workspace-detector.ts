@@ -1,6 +1,19 @@
 import { access, readFile, readdir } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 
+/** Framework dependencies that indicate a frontend package */
+export const FE_INDICATORS = [
+	"react",
+	"react-dom",
+	"next",
+	"vue",
+	"nuxt",
+	"svelte",
+	"@sveltejs/kit",
+	"astro",
+	"@angular/core",
+] as const
+
 /**
  * Walk up from targetPath to find monorepo root.
  * Root = directory with package.json containing "workspaces" field or pnpm-workspace.yaml.
@@ -85,7 +98,7 @@ export async function detectApps(rootPath: string): Promise<string[]> {
 				if (!pkg) continue
 				// An "app" typically has dev/start scripts or framework deps
 				const hasAppScript = pkg.scripts?.dev || pkg.scripts?.start || pkg.scripts?.build
-				const hasFramework = ["next", "react", "vue", "svelte", "nuxt", "astro"].some(
+				const hasFramework = FE_INDICATORS.some(
 					(fw) => fw in (pkg.dependencies ?? {}) || fw in (pkg.devDependencies ?? {}),
 				)
 				if (hasAppScript && hasFramework) {

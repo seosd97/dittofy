@@ -1,22 +1,13 @@
 import type { ConsistencyMetrics } from "@defs/analysis.js"
 
-/** Format an array of items as a markdown table */
-export function formatTable(headers: string[], rows: string[][]): string {
-	const headerLine = `| ${headers.join(" | ")} |`
-	const separatorLine = `|${headers.map(() => "---").join("|")}|`
-	const rowLines = rows.map((row) => `| ${row.join(" | ")} |`)
-	return [headerLine, separatorLine, ...rowLines].join("\n")
-}
-
-/** Format a list of items with name-value pairs */
-export function formatTokenList(
-	items: { name: string; value: string }[],
-	includeUsage?: boolean,
-): string {
-	if (items.length === 0) return "*No data available*"
+/** Build a markdown table from headers and rows */
+export function mdTable(headers: string[], rows: string[][]): string {
+	const sep = headers.map((h) => "-".repeat(Math.max(h.length, 3)))
 	const lines: string[] = []
-	for (const item of items) {
-		lines.push(`- \`${item.name}\`: ${item.value}`)
+	lines.push(`| ${headers.join(" | ")} |`)
+	lines.push(`|${sep.join("|")}|`)
+	for (const row of rows) {
+		lines.push(`| ${row.join(" | ")} |`)
 	}
 	return lines.join("\n")
 }

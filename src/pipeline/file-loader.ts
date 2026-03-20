@@ -61,20 +61,26 @@ export async function loadSelectedFiles(
 }
 
 /**
- * Validate and resolve planner-selected files against the file tree.
- * Uses flexible matching: exact → suffix (target preferred) → reverse suffix → filename.
- * Returns false if <50% resolved → trigger fallback.
+ * Unified file resolution: resolve planner-selected files against the file tree,
+ * and auto-supplement with scored files if match quality is too low.
+ *
+ * 1. Try 4-stage matching (exact → suffix → reverse suffix → filename) for each planner path
+ * 2. Calculate match quality (resolved / total)
+ * 3. If <50% resolved, supplement each aspect with auto-selected files based on scoring
+ *
+ * Mutates plan.fileSelection in place with resolved/supplemented paths.
  */
-export function validateFileSelection(
+export function resolveFiles(
 	plan: AnalysisPlan,
 	fileTree: FileTreeNode[],
 	targetRelative = "",
-): boolean {
+): { matchRate: number; supplemented: boolean } {
 	const treeFiles = flattenTreePaths(fileTree)
 	const treeFileArr = [...treeFiles]
 	let totalSelected = 0
 	let totalResolved = 0
 
+	// Stage 1: Resolve planner paths via 4-stage matching
 	for (const [aspect, files] of Object.entries(plan.fileSelection)) {
 		if (!files) continue
 		const resolved: string[] = []
@@ -98,12 +104,24 @@ export function validateFileSelection(
 		totalResolved += resolved.length
 	}
 
-	if (totalSelected === 0) return true
+	if (totalSelected === 0) {
+		return { matchRate: 1, supplemented: false }
+	}
+
 	const matchRate = totalResolved / totalSelected
 	logger.info(
 		`File selection: ${totalResolved}/${totalSelected} resolved (${(matchRate * 100).toFixed(0)}%)`,
 	)
-	return matchRate >= 0.5
+
+	// Stage 2: If match quality too low, supplement with auto-selected files
+	if (matchRate < 0.5) {
+		logger.warn("File selection quality too low (<50%). Supplementing with auto-selected files.")
+		const autoSelected = selectFilesByScoring(fileTree, plan.aspects)
+		plan.fileSelection = autoSelected
+		return { matchRate, supplemented: true }
+	}
+
+	return { matchRate, supplemented: false }
 }
 
 /**
@@ -206,10 +224,10 @@ const ASPECT_FILE_HINTS: Record<string, { pathHints: RegExp[]; extPriority: stri
 }
 
 /**
- * Auto-select files from tree when planner selection fails.
- * Picks files per-aspect based on path hints and extension priorities.
+ * Score-based file selection per aspect.
+ * Used internally when planner selection quality is too low.
  */
-export function autoSelectFiles(
+function selectFilesByScoring(
 	fileTree: FileTreeNode[],
 	aspects: AspectName[],
 	maxPerAspect = 8,

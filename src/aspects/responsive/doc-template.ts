@@ -1,5 +1,5 @@
 import type { TemplateContext } from "@defs/templates.js"
-import { renderConsistency } from "@pipeline/assembly/format-utils.js"
+import { mdTable, renderConsistency } from "@pipeline/assembly/format-utils.js"
 
 export function renderResponsiveDoc(ctx: TemplateContext): string | null {
 	const responsive = ctx.analysis.responsiveStrategy
@@ -19,11 +19,12 @@ export function renderResponsiveDoc(ctx: TemplateContext): string | null {
 	// Breakpoints
 	if (responsive.breakpoints.length > 0) {
 		lines.push("## Breakpoints\n")
-		lines.push("| Name | Value |")
-		lines.push("|------|-------|")
-		for (const b of responsive.breakpoints) {
-			lines.push(`| ${b.name} | \`${b.value}\` |`)
-		}
+		lines.push(
+			mdTable(
+				["Name", "Value"],
+				responsive.breakpoints.map((b) => [b.name, `\`${b.value}\``]),
+			),
+		)
 		lines.push("")
 	}
 
@@ -39,22 +40,24 @@ export function renderResponsiveDoc(ctx: TemplateContext): string | null {
 	// Component Adaptations
 	if (responsive.componentAdaptations && responsive.componentAdaptations.length > 0) {
 		lines.push("## Component Adaptations\n")
-		lines.push("| Component | Breakpoint | Adaptation |")
-		lines.push("|-----------|------------|------------|")
-		for (const a of responsive.componentAdaptations) {
-			lines.push(`| ${a.component} | ${a.breakpoint} | ${a.adaptation} |`)
-		}
+		lines.push(
+			mdTable(
+				["Component", "Breakpoint", "Adaptation"],
+				responsive.componentAdaptations.map((a) => [a.component, a.breakpoint, a.adaptation]),
+			),
+		)
 		lines.push("")
 	}
 
 	// Layout Adaptations
 	if (responsive.layoutAdaptations && responsive.layoutAdaptations.length > 0) {
 		lines.push("## Layout Adaptations\n")
-		lines.push("| Layout Element | Breakpoint | Behavior |")
-		lines.push("|----------------|------------|----------|")
-		for (const a of responsive.layoutAdaptations) {
-			lines.push(`| ${a.layoutElement} | ${a.breakpoint} | ${a.behavior} |`)
-		}
+		lines.push(
+			mdTable(
+				["Layout Element", "Breakpoint", "Behavior"],
+				responsive.layoutAdaptations.map((a) => [a.layoutElement, a.breakpoint, a.behavior]),
+			),
+		)
 		lines.push("")
 	}
 

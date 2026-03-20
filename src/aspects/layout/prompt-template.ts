@@ -1,4 +1,5 @@
 import type { PromptTemplateContext } from "@defs/templates.js"
+import { buildLayoutReference } from "@pipeline/assembly/design-reference-builders.js"
 import { buildEnvironmentSection } from "@pipeline/assembly/resolve-environment.js"
 import { buildFileStructureGuide } from "@pipeline/assembly/resolve-structure.js"
 import { buildArtifactsSection, buildContractSection } from "@pipeline/assembly/step-contracts.js"
@@ -37,7 +38,7 @@ ${buildEnvironmentSection(env)}
 ${buildFileStructureGuide("layout-shell", structure)}
 
 ## Design Reference
-${buildLayoutReference(layoutSystem)}
+${buildLayoutDesignReference(layoutSystem)}
 
 ## Expected Outcome
 The layout shell is in place. The root layout renders Header, PageContainer (with a content slot), and Footer. Individual pages can be slotted into the PageContainer.
@@ -53,64 +54,12 @@ ${buildArtifactsSection("layout-shell")}
 `
 }
 
-function buildLayoutReference(layout: import("@defs/analysis.js").LayoutSystem | null): string {
+function buildLayoutDesignReference(
+	layout: import("@defs/analysis.js").LayoutSystem | null,
+): string {
 	if (!layout) {
 		return "*No layout data was extracted from analysis. Define a reasonable layout shell based on the design essence.*"
 	}
 
-	const sections: string[] = []
-
-	// Layout Approach
-	sections.push(`### Layout Approach\n${layout.approach}`)
-
-	// Containers
-	if (layout.containers.length > 0) {
-		sections.push("\n### Containers")
-		for (const c of layout.containers) {
-			const maxW = c.maxWidth ? `max-width: \`${c.maxWidth}\`` : ""
-			const pad = c.padding ? `padding: \`${c.padding}\`` : ""
-			const dims = [maxW, pad].filter(Boolean).join(", ")
-			sections.push(`- **${c.name}**: ${dims}`)
-
-			if (c.responsiveOverrides && c.responsiveOverrides.length > 0) {
-				for (const ro of c.responsiveOverrides) {
-					const overrides: string[] = []
-					if (ro.maxWidth) overrides.push(`max-width: \`${ro.maxWidth}\``)
-					if (ro.padding) overrides.push(`padding: \`${ro.padding}\``)
-					if (ro.columns) overrides.push(`columns: ${ro.columns}`)
-					if (ro.gap) overrides.push(`gap: \`${ro.gap}\``)
-					sections.push(`  - @${ro.breakpoint}: ${overrides.join(", ")}`)
-				}
-			}
-		}
-	}
-
-	// Grids
-	if (layout.grids.length > 0) {
-		sections.push("\n### Grid Systems")
-		for (const g of layout.grids) {
-			const cols = g.columns ? `${g.columns} columns` : ""
-			const gap = g.gap ? `gap: \`${g.gap}\`` : ""
-			const details = [g.type, cols, gap].filter(Boolean).join(", ")
-			sections.push(`- ${details}`)
-		}
-	}
-
-	// Navigation
-	if (layout.navigation.length > 0) {
-		sections.push("\n### Navigation Patterns")
-		for (const n of layout.navigation) {
-			sections.push(`- **${n.type}**: ${n.description}`)
-		}
-	}
-
-	// Spacing Rhythm
-	if (layout.spacingRhythm && layout.spacingRhythm.length > 0) {
-		sections.push("\n### Spacing Rhythm")
-		for (const sr of layout.spacingRhythm) {
-			sections.push(`- **${sr.name}** (\`${sr.value}\`): ${sr.usage}`)
-		}
-	}
-
-	return sections.join("\n")
+	return buildLayoutReference(layout)
 }

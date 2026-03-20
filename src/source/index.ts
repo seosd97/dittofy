@@ -13,7 +13,12 @@ import { buildFileTree, scanFiles } from "./file-scanner.js"
 import { detectTechStack } from "./tech-stack-detector.js"
 
 export { buildFileTree } from "./file-scanner.js"
-export { detectApps, findMonorepoRoot, resolveWorkspaceDeps } from "./workspace-detector.js"
+export {
+	FE_INDICATORS,
+	detectApps,
+	findMonorepoRoot,
+	resolveWorkspaceDeps,
+} from "./workspace-detector.js"
 
 export interface ExtractionOutput {
 	extraction: ExtractionResult

@@ -21,3 +21,20 @@ export const CONTEXT_BUDGET = {
 	maxFilesPerAnalyzer: 50,
 	maxSummaryTokens: 8_000,
 } as const
+
+/** Estimate token count for a given text, accounting for CJK characters */
+export function estimateTokens(text: string): number {
+	let asciiLen = 0
+	let cjkCount = 0
+	for (let i = 0; i < text.length; i++) {
+		const code = text.charCodeAt(i)
+		if (CJK_RANGES.some(([start, end]) => code >= start && code <= end)) {
+			cjkCount++
+		} else {
+			asciiLen++
+		}
+	}
+	return Math.ceil(
+		asciiLen / TOKEN_RATIO.asciiCharsPerToken + cjkCount * TOKEN_RATIO.cjkTokensPerChar,
+	)
+}

@@ -1,4 +1,5 @@
 import type { PromptTemplateContext } from "@defs/templates.js"
+import { buildTypographyReference } from "@pipeline/assembly/design-reference-builders.js"
 import { buildEnvironmentSection } from "@pipeline/assembly/resolve-environment.js"
 import { buildFileStructureGuide } from "@pipeline/assembly/resolve-structure.js"
 import { buildArtifactsSection, buildContractSection } from "@pipeline/assembly/step-contracts.js"
@@ -34,7 +35,7 @@ ${buildEnvironmentSection(env)}
 ${buildFileStructureGuide("typography", structure)}
 
 ## Design Reference
-${buildTypographyReference(typography)}
+${buildTypoDesignReference(typography)}
 
 ## Expected Outcome
 The typography system is fully defined in the token file. Font families are loaded, the type scale covers all use cases (headings, body, caption, etc.), and typographic rhythm is established.
@@ -50,81 +51,16 @@ ${buildArtifactsSection("typography")}
 `
 }
 
-function buildTypographyReference(
+function buildTypoDesignReference(
 	typo: import("@defs/analysis.js").TypographySystem | null,
 ): string {
 	if (!typo) {
 		return "*No typography data was extracted from analysis. Define reasonable defaults based on the design essence.*"
 	}
 
-	const sections: string[] = []
+	const result = buildTypographyReference(typo)
 
-	// Font Families
-	if (typo.fontFamilyDefs && typo.fontFamilyDefs.length > 0) {
-		sections.push("### Font Families")
-		for (const f of typo.fontFamilyDefs) {
-			sections.push(`- **${f.name}** (${f.category}): \`${f.fallbackStack}\` — ${f.usage}`)
-		}
-	} else if (typo.fontFamilies.length > 0) {
-		sections.push("### Font Families")
-		for (const f of typo.fontFamilies) {
-			sections.push(`- ${f}`)
-		}
-	}
-
-	// Type Scale
-	if (typo.scale.length > 0) {
-		sections.push("\n### Type Scale")
-		sections.push("| Name | Font Size | Line Height | Font Weight | Usage |")
-		sections.push("|------|-----------|-------------|-------------|-------|")
-		for (const s of typo.scale) {
-			sections.push(
-				`| ${s.name} | \`${s.fontSize}\` | ${s.lineHeight ? `\`${s.lineHeight}\`` : "—"} | ${s.fontWeight ?? "—"} | ${s.usage} |`,
-			)
-		}
-	}
-
-	// Font Weights
-	if (typo.fontWeights.length > 0) {
-		sections.push("\n### Font Weights")
-		sections.push("| Name | Value |")
-		sections.push("|------|-------|")
-		for (const w of typo.fontWeights) {
-			sections.push(`| ${w.name} | \`${w.value}\` |`)
-		}
-	}
-
-	// Line Heights
-	if (typo.lineHeights.length > 0) {
-		sections.push("\n### Line Heights")
-		sections.push("| Name | Value |")
-		sections.push("|------|-------|")
-		for (const lh of typo.lineHeights) {
-			sections.push(`| ${lh.name} | \`${lh.value}\` |`)
-		}
-	}
-
-	// Letter Spacings
-	if (typo.letterSpacings && typo.letterSpacings.length > 0) {
-		sections.push("\n### Letter Spacings")
-		sections.push("| Name | Value | Usage |")
-		sections.push("|------|-------|-------|")
-		for (const ls of typo.letterSpacings) {
-			sections.push(`| ${ls.name} | \`${ls.value}\` | ${ls.usage} |`)
-		}
-	}
-
-	// Responsive Scaling
-	if (typo.responsiveScaling && typo.responsiveScaling.length > 0) {
-		sections.push("\n### Responsive Font Scaling")
-		for (const rs of typo.responsiveScaling) {
-			sections.push(
-				`- **${rs.breakpoint}**: scale factor \`${rs.scaleFactor}\` — ${rs.description}`,
-			)
-		}
-	}
-
-	return sections.length > 0
-		? sections.join("\n")
+	return result.length > 0
+		? result
 		: "*No typography values extracted. Define reasonable defaults based on the design essence.*"
 }

@@ -1,5 +1,5 @@
 import type { TemplateContext } from "@defs/templates.js"
-import { renderConsistency } from "@pipeline/assembly/format-utils.js"
+import { mdTable, renderConsistency } from "@pipeline/assembly/format-utils.js"
 
 export function renderInteractionsDoc(ctx: TemplateContext): string | null {
 	const interactions = ctx.analysis.interactionPatterns
@@ -43,11 +43,12 @@ export function renderInteractionsDoc(ctx: TemplateContext): string | null {
 	// Transitions
 	if (interactions.transitions.length > 0) {
 		lines.push("## Transitions\n")
-		lines.push("| Property | Duration | Easing |")
-		lines.push("|----------|----------|--------|")
-		for (const t of interactions.transitions) {
-			lines.push(`| ${t.property} | ${t.duration} | ${t.easing} |`)
-		}
+		lines.push(
+			mdTable(
+				["Property", "Duration", "Easing"],
+				interactions.transitions.map((t) => [t.property, t.duration, t.easing]),
+			),
+		)
 		lines.push("")
 	}
 

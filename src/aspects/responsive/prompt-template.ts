@@ -1,4 +1,5 @@
 import type { PromptTemplateContext } from "@defs/templates.js"
+import { buildResponsiveReference } from "@pipeline/assembly/design-reference-builders.js"
 import { buildEnvironmentSection } from "@pipeline/assembly/resolve-environment.js"
 import { buildFileStructureGuide } from "@pipeline/assembly/resolve-structure.js"
 import { buildArtifactsSection, buildContractSection } from "@pipeline/assembly/step-contracts.js"
@@ -35,7 +36,7 @@ Describe what the user sees at each breakpoint and how layout, typography, and s
 ${buildFileStructureGuide("responsive", structure)}
 
 ## Design Reference
-${buildResponsiveReference(responsiveStrategy, designTokens)}
+${buildResponsiveDesignReference(responsiveStrategy, designTokens)}
 
 ## Expected Outcome
 All pages and components respond correctly to viewport changes. Layout adapts from mobile to desktop with appropriate breakpoints. Navigation has a mobile-friendly pattern. Typography and spacing scale appropriately.
@@ -51,58 +52,13 @@ ${buildArtifactsSection("responsive")}
 `
 }
 
-function buildResponsiveReference(
+function buildResponsiveDesignReference(
 	responsive: import("@defs/analysis.js").ResponsiveStrategy | null,
 	tokens: import("@defs/analysis.js").DesignTokens | null,
 ): string {
-	const sections: string[] = []
+	const result = buildResponsiveReference(responsive, tokens)
 
-	// Breakpoints from responsive strategy
-	if (responsive) {
-		if (responsive.breakpoints.length > 0) {
-			sections.push("### Breakpoints")
-			sections.push("| Name | Value |")
-			sections.push("|------|-------|")
-			for (const bp of responsive.breakpoints) {
-				sections.push(`| ${bp.name} | \`${bp.value}\` |`)
-			}
-		}
-
-		if (responsive.patterns.length > 0) {
-			sections.push("\n### Responsive Patterns")
-			for (const p of responsive.patterns) {
-				sections.push(`- **${p.name}** (@${p.breakpoint}): ${p.description}`)
-			}
-		}
-
-		if (responsive.componentAdaptations && responsive.componentAdaptations.length > 0) {
-			sections.push("\n### Component Adaptations")
-			for (const ca of responsive.componentAdaptations) {
-				sections.push(`- **${ca.component}** (@${ca.breakpoint}): ${ca.adaptation}`)
-			}
-		}
-
-		if (responsive.layoutAdaptations && responsive.layoutAdaptations.length > 0) {
-			sections.push("\n### Layout Adaptations")
-			for (const la of responsive.layoutAdaptations) {
-				sections.push(`- **${la.layoutElement}** (@${la.breakpoint}): ${la.behavior}`)
-			}
-		}
-	}
-
-	// Token breakpoints as fallback/supplement
-	if (tokens && tokens.breakpoints.length > 0) {
-		if (!responsive || responsive.breakpoints.length === 0) {
-			sections.push("### Breakpoints (from tokens)")
-			sections.push("| Name | Value |")
-			sections.push("|------|-------|")
-			for (const bp of tokens.breakpoints) {
-				sections.push(`| ${bp.name} | \`${bp.value}\` |`)
-			}
-		}
-	}
-
-	return sections.length > 0
-		? sections.join("\n")
+	return result.length > 0
+		? result
 		: "*No responsive data was extracted from analysis. Implement standard mobile-first responsive breakpoints (640px, 768px, 1024px, 1280px).*"
 }

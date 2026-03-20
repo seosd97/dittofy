@@ -2,6 +2,7 @@ import { access, readFile, readdir, rm, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { basename, join, resolve } from "node:path"
 import { UserError } from "@defs/errors.js"
+import { FE_INDICATORS } from "@source/workspace-detector.js"
 import { logger } from "@utils/logger.js"
 import { downloadTemplate } from "giget"
 
@@ -131,18 +132,6 @@ interface MonorepoResult {
 	selectedPackage?: string
 	fePackages?: string[]
 }
-
-const FE_INDICATORS = [
-	"react",
-	"react-dom",
-	"next",
-	"vue",
-	"nuxt",
-	"svelte",
-	"@sveltejs/kit",
-	"astro",
-	"@angular/core",
-]
 
 async function detectMonorepo(repoPath: string): Promise<MonorepoResult> {
 	const rootPkgPath = join(repoPath, "package.json")

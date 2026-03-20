@@ -1,4 +1,14 @@
 import type { PromptTemplateContext } from "@defs/templates.js"
+import {
+	buildBorderRadiusReference,
+	buildBreakpointsReference,
+	buildColorReference,
+	buildMotionReference,
+	buildShadowsReference,
+	buildSpacingReference,
+	buildThemeVariantsReference,
+	buildZIndexReference,
+} from "@pipeline/assembly/design-reference-builders.js"
 import { buildEnvironmentSection } from "@pipeline/assembly/resolve-environment.js"
 import { buildFileStructureGuide } from "@pipeline/assembly/resolve-structure.js"
 import { buildArtifactsSection, buildContractSection } from "@pipeline/assembly/step-contracts.js"
@@ -67,101 +77,18 @@ function buildDesignReference(tokens: import("@defs/analysis.js").DesignTokens |
 		return "*No design tokens were extracted from analysis. Define reasonable defaults based on the design essence.*"
 	}
 
-	const sections: string[] = []
+	const parts = [
+		buildColorReference(tokens),
+		buildSpacingReference(tokens),
+		buildBorderRadiusReference(tokens),
+		buildShadowsReference(tokens),
+		buildMotionReference(tokens),
+		buildBreakpointsReference(tokens.breakpoints),
+		buildZIndexReference(tokens),
+		buildThemeVariantsReference(tokens),
+	].filter(Boolean)
 
-	// Colors
-	if (tokens.colorGroups && tokens.colorGroups.length > 0) {
-		sections.push("### Colors (by group)")
-		for (const group of tokens.colorGroups) {
-			const level = group.level ? ` (${group.level})` : ""
-			sections.push(`\n**${group.group}${level}**:`)
-			sections.push("| Name | Value | Usage |")
-			sections.push("|------|-------|-------|")
-			for (const t of group.tokens) {
-				sections.push(`| ${t.name} | \`${t.value}\` | ${t.usage} |`)
-			}
-		}
-	}
-
-	// Spacing
-	if (tokens.spacing.length > 0) {
-		sections.push("\n### Spacing")
-		sections.push("| Name | Value | Usage |")
-		sections.push("|------|-------|-------|")
-		for (const t of tokens.spacing) {
-			sections.push(`| ${t.name} | \`${t.value}\` | ${t.usage} |`)
-		}
-	}
-
-	// Border Radius
-	if (tokens.borderRadius.length > 0) {
-		sections.push("\n### Border Radius")
-		sections.push("| Name | Value |")
-		sections.push("|------|-------|")
-		for (const t of tokens.borderRadius) {
-			sections.push(`| ${t.name} | \`${t.value}\` |`)
-		}
-	}
-
-	// Shadows
-	if (tokens.shadows.length > 0) {
-		sections.push("\n### Shadows")
-		sections.push("| Name | Value |")
-		sections.push("|------|-------|")
-		for (const t of tokens.shadows) {
-			sections.push(`| ${t.name} | \`${t.value}\` |`)
-		}
-	}
-
-	// Motion
-	if (tokens.motion && tokens.motion.length > 0) {
-		sections.push("\n### Motion Tokens")
-		sections.push("| Name | Duration | Easing | Usage |")
-		sections.push("|------|----------|--------|-------|")
-		for (const t of tokens.motion) {
-			sections.push(`| ${t.name} | \`${t.duration}\` | \`${t.easing}\` | ${t.usage} |`)
-		}
-	}
-
-	// Breakpoints
-	if (tokens.breakpoints.length > 0) {
-		sections.push("\n### Breakpoints")
-		sections.push("| Name | Value |")
-		sections.push("|------|-------|")
-		for (const t of tokens.breakpoints) {
-			sections.push(`| ${t.name} | \`${t.value}\` |`)
-		}
-	}
-
-	// Z-Index
-	if (tokens.zIndex.length > 0) {
-		sections.push("\n### Z-Index")
-		sections.push("| Name | Value |")
-		sections.push("|------|-------|")
-		for (const t of tokens.zIndex) {
-			sections.push(`| ${t.name} | \`${t.value}\` |`)
-		}
-	}
-
-	// Theme Variants
-	if (tokens.themeVariants && tokens.themeVariants.length > 0) {
-		sections.push("\n### Theme Variants")
-		if (tokens.defaultTheme) {
-			sections.push(`**Default Theme:** ${tokens.defaultTheme}`)
-		}
-		for (const variant of tokens.themeVariants) {
-			sections.push(`\n**${variant.name}** (${variant.surfaceStrategy}):`)
-			sections.push("| Token | Value | Derivation |")
-			sections.push("|-------|-------|------------|")
-			for (const override of variant.colorOverrides) {
-				sections.push(
-					`| ${override.tokenName} | \`${override.value}\` | ${override.derivation ?? "-"} |`,
-				)
-			}
-		}
-	}
-
-	return sections.length > 0
-		? sections.join("\n")
+	return parts.length > 0
+		? parts.join("\n")
 		: "*No token values extracted. Define reasonable defaults based on the design essence.*"
 }

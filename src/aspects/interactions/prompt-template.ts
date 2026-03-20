@@ -1,4 +1,5 @@
 import type { PromptTemplateContext } from "@defs/templates.js"
+import { buildInteractionsReference } from "@pipeline/assembly/design-reference-builders.js"
 import { buildEnvironmentSection } from "@pipeline/assembly/resolve-environment.js"
 import { buildFileStructureGuide } from "@pipeline/assembly/resolve-structure.js"
 import { buildArtifactsSection, buildContractSection } from "@pipeline/assembly/step-contracts.js"
@@ -38,7 +39,7 @@ Apply interactions to:
 ${buildFileStructureGuide("interactions", structure)}
 
 ## Design Reference
-${buildInteractionsReference(interactionPatterns)}
+${buildInteractionsDesignReference(interactionPatterns)}
 
 ## Expected Outcome
 All interactive elements have appropriate state changes with smooth transitions. Pages have entrance animations. Navigation has open/close transitions. Focus states are visible for accessibility.
@@ -56,60 +57,16 @@ ${buildArtifactsSection("interactions")}
 `
 }
 
-function buildInteractionsReference(
+function buildInteractionsDesignReference(
 	interactions: import("@defs/analysis.js").InteractionPatterns | null,
 ): string {
 	if (!interactions) {
 		return "*No interaction data was extracted from analysis. Implement sensible defaults: 150ms for hover transitions, 300ms for page animations, ease-out easing.*"
 	}
 
-	const sections: string[] = []
+	const result = buildInteractionsReference(interactions)
 
-	// Animations
-	if (interactions.animations.length > 0) {
-		sections.push("### Animations")
-		sections.push("| Name | Type | Description | Duration | Easing | Trigger |")
-		sections.push("|------|------|-------------|----------|--------|---------|")
-		for (const a of interactions.animations) {
-			sections.push(
-				`| ${a.name} | ${a.type} | ${a.description} | ${a.duration ?? "—"} | ${a.easing ?? "—"} | ${a.trigger ?? "—"} |`,
-			)
-		}
-	}
-
-	// Transitions
-	if (interactions.transitions.length > 0) {
-		sections.push("\n### Transitions")
-		sections.push("| Property | Duration | Easing |")
-		sections.push("|----------|----------|--------|")
-		for (const t of interactions.transitions) {
-			sections.push(`| ${t.property} | \`${t.duration}\` | \`${t.easing}\` |`)
-		}
-	}
-
-	// Gestures
-	if (interactions.gestures.length > 0) {
-		sections.push("\n### Gestures")
-		for (const g of interactions.gestures) {
-			const trigger = g.triggerElement ? ` (on ${g.triggerElement})` : ""
-			const feedback = g.feedbackType ? ` — feedback: ${g.feedbackType}` : ""
-			sections.push(`- **${g.type}**${trigger}: ${g.description}${feedback}`)
-		}
-	}
-
-	// Choreography
-	if (interactions.choreography && interactions.choreography.length > 0) {
-		sections.push("\n### State Choreography")
-		for (const ch of interactions.choreography) {
-			sections.push(`\n**${ch.name}**: ${ch.description}`)
-			sections.push("Steps:")
-			for (let i = 0; i < ch.steps.length; i++) {
-				sections.push(`${i + 1}. ${ch.steps[i]}`)
-			}
-		}
-	}
-
-	return sections.length > 0
-		? sections.join("\n")
+	return result.length > 0
+		? result
 		: "*No interaction patterns extracted. Implement sensible defaults: 150ms for hover transitions, 300ms for page animations, ease-out easing.*"
 }

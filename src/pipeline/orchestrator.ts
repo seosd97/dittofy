@@ -22,7 +22,7 @@ import {
 } from "./assembly/tree-renderer.js"
 import { createPipelineContext } from "./context.js"
 import { synthesizeEssence } from "./essence.js"
-import { autoSelectFiles, loadSelectedFiles, validateFileSelection } from "./file-loader.js"
+import { loadSelectedFiles, resolveFiles } from "./file-loader.js"
 import type { AnalysisPlan } from "./plan-parser.js"
 import { planAnalysis } from "./planner.js"
 import { formatReconciliation, reconcileAnalysis } from "./reconciliation.js"
@@ -255,16 +255,8 @@ export async function runAnalysisPipeline(
 			}
 		}
 
-		// Validate file selection
-		const selectionValid = validateFileSelection(
-			plan,
-			extraction.extraction.fileTree,
-			targetRelative,
-		)
-		if (!selectionValid) {
-			logger.warn("File selection validation failed (<50% match). Using auto-selected files.")
-			plan.fileSelection = autoSelectFiles(extraction.extraction.fileTree, plan.aspects)
-		}
+		// Resolve and validate file selection (auto-supplements if <50% match)
+		resolveFiles(plan, extraction.extraction.fileTree, targetRelative)
 
 		// Load selected files from disk (lazy loading — only what planner selected)
 		const codeChunks = await loadSelectedFiles(

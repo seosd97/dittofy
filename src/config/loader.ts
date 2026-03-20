@@ -1,6 +1,7 @@
 import { loadConfig } from "c12"
 import type { DittoConfig } from "../types/config.js"
 import { UserError } from "../types/errors.js"
+import { PROVIDER_ENV_VARS } from "./constants.js"
 import { defaultConfig } from "./defaults.js"
 import { configSchema } from "./schema.js"
 
@@ -32,12 +33,12 @@ export async function loadDittoConfig(
 
 function resolveApiKeys(config: Record<string, unknown>): Record<string, unknown> {
 	const apiKeys = (config.apiKeys ?? {}) as Record<string, string | undefined>
+	const resolved: Record<string, string | undefined> = {}
+	for (const [provider, envVar] of Object.entries(PROVIDER_ENV_VARS)) {
+		resolved[provider] = apiKeys[provider] ?? process.env[envVar]
+	}
 	return {
 		...config,
-		apiKeys: {
-			openai: apiKeys.openai ?? process.env.OPENAI_API_KEY,
-			anthropic: apiKeys.anthropic ?? process.env.ANTHROPIC_API_KEY,
-			zai: apiKeys.zai ?? process.env.ZAI_API_KEY,
-		},
+		apiKeys: resolved,
 	}
 }

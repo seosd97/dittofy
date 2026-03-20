@@ -1,4 +1,4 @@
-import { CJK_RANGES, CONTEXT_BUDGET, TOKEN_RATIO } from "@config/token-estimation.js"
+import { CONTEXT_BUDGET, estimateTokens } from "@config/token-estimation.js"
 import type { CodeChunk, FileTreeNode } from "@defs/extraction.js"
 
 export interface ContextBuildResult {
@@ -54,21 +54,7 @@ export function buildContext(
 	}
 }
 
-export function estimateTokens(text: string): number {
-	let asciiLen = 0
-	let cjkCount = 0
-	for (let i = 0; i < text.length; i++) {
-		const code = text.charCodeAt(i)
-		if (CJK_RANGES.some(([start, end]) => code >= start && code <= end)) {
-			cjkCount++
-		} else {
-			asciiLen++
-		}
-	}
-	return Math.ceil(
-		asciiLen / TOKEN_RATIO.asciiCharsPerToken + cjkCount * TOKEN_RATIO.cjkTokensPerChar,
-	)
-}
+export { estimateTokens } from "@config/token-estimation.js"
 
 function buildFileStructureSummary(tree: FileTreeNode[], prefix = "", depth = 0): string {
 	if (depth > 3) return ""

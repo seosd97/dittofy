@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { PROVIDER_ENV_VARS } from "./constants.js"
 
 export const configSchema = z
 	.object({
@@ -28,10 +29,5 @@ export const configSchema = z
 	)
 
 function getEnvVarName(provider: string): string {
-	const map: Record<string, string> = {
-		openai: "OPENAI_API_KEY",
-		anthropic: "ANTHROPIC_API_KEY",
-		zai: "ZAI_API_KEY",
-	}
-	return map[provider] ?? `${provider.toUpperCase()}_API_KEY`
+	return PROVIDER_ENV_VARS[provider] ?? `${provider.toUpperCase()}_API_KEY`
 }

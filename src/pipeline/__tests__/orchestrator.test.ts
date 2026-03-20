@@ -168,7 +168,6 @@ vi.mock("@pipeline/essence.js", () => ({
 vi.mock("@pipeline/reconciliation.js", () => ({
 	reconcileAnalysis: vi.fn().mockReturnValue({
 		conflicts: [],
-		resolutions: [],
 	}),
 }))
 

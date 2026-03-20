@@ -134,17 +134,9 @@ describe("synthesizeEssence", () => {
 			conflicts: [
 				{
 					field: "primaryColor",
-					sources: [
-						{ aspect: "designTokens", value: "#000" },
-						{ aspect: "componentCatalog", value: "#111" },
-					],
-				},
-			],
-			resolutions: [
-				{
-					field: "primaryColor",
-					resolvedValue: "#000",
-					reason: "config takes priority",
+					tokenValue: "#000",
+					otherValue: "#111",
+					otherAspect: "componentCatalog",
 				},
 			],
 		}

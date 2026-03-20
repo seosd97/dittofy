@@ -1,5 +1,5 @@
 import type { TemplateContext } from "@defs/templates.js"
-import { renderConsistency } from "@pipeline/assembly/format-utils.js"
+import { mdTable, renderConsistency } from "@pipeline/assembly/format-utils.js"
 
 export function renderLayoutDoc(ctx: TemplateContext): string | null {
 	const layout = ctx.analysis.layoutSystem
@@ -42,15 +42,18 @@ export function renderLayoutDoc(ctx: TemplateContext): string | null {
 			}
 			if (c.responsiveOverrides && c.responsiveOverrides.length > 0) {
 				lines.push("\n**Responsive Overrides:**\n")
-				lines.push("| Breakpoint | Max Width | Padding | Columns | Gap |")
-				lines.push("|------------|-----------|---------|---------|-----|")
-				for (const o of c.responsiveOverrides) {
-					const mw = o.maxWidth ?? "-"
-					const p = o.padding ?? "-"
-					const col = o.columns != null ? String(o.columns) : "-"
-					const gap = o.gap ?? "-"
-					lines.push(`| ${o.breakpoint} | ${mw} | ${p} | ${col} | ${gap} |`)
-				}
+				lines.push(
+					mdTable(
+						["Breakpoint", "Max Width", "Padding", "Columns", "Gap"],
+						c.responsiveOverrides.map((o) => [
+							o.breakpoint,
+							o.maxWidth ?? "-",
+							o.padding ?? "-",
+							o.columns != null ? String(o.columns) : "-",
+							o.gap ?? "-",
+						]),
+					),
+				)
 			}
 			lines.push("")
 		}
@@ -68,11 +71,12 @@ export function renderLayoutDoc(ctx: TemplateContext): string | null {
 	// Spacing Rhythm
 	if (layout.spacingRhythm && layout.spacingRhythm.length > 0) {
 		lines.push("## Spacing Rhythm\n")
-		lines.push("| Name | Value | Usage |")
-		lines.push("|------|-------|-------|")
-		for (const s of layout.spacingRhythm) {
-			lines.push(`| ${s.name} | \`${s.value}\` | ${s.usage} |`)
-		}
+		lines.push(
+			mdTable(
+				["Name", "Value", "Usage"],
+				layout.spacingRhythm.map((s) => [s.name, `\`${s.value}\``, s.usage]),
+			),
+		)
 		lines.push("")
 	}
 

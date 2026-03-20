@@ -125,6 +125,13 @@ function consistencyLine(c: ConsistencyMetrics | null | undefined): string {
 	return `*Consistency: ${c.score}/100 (${c.maturity})*\n`
 }
 
+function mdTable(headers: string[], rows: string[][]): string {
+	const header = `| ${headers.join(" | ")} |`
+	const separator = `|${headers.map(() => "------").join("|")}|`
+	const body = rows.map((r) => `| ${r.join(" | ")} |`)
+	return [header, separator, ...body, ""].join("\n")
+}
+
 function renderNotes(
 	designNotes: { observations: string[]; anomalies?: string[] } | null | undefined,
 ): string {
@@ -189,73 +196,73 @@ function renderDesignTokens(tokens: DesignTokens): string {
 		for (const group of tokens.colorGroups) {
 			const level = group.level ? ` (${group.level})` : ""
 			lines.push(`#### ${group.group}${level}\n`)
-			lines.push("| Name | Value | Usage |")
-			lines.push("|------|-------|-------|")
-			for (const t of group.tokens) {
-				lines.push(`| ${t.name} | \`${t.value}\` | ${t.usage} |`)
-			}
-			lines.push("")
+			lines.push(
+				mdTable(
+					["Name", "Value", "Usage"],
+					group.tokens.map((t) => [t.name, `\`${t.value}\``, t.usage]),
+				),
+			)
 		}
 	}
 
 	if (tokens.spacing.length > 0) {
 		lines.push("### Spacing\n")
-		lines.push("| Name | Value | Usage |")
-		lines.push("|------|-------|-------|")
-		for (const s of tokens.spacing) {
-			lines.push(`| ${s.name} | \`${s.value}\` | ${s.usage} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value", "Usage"],
+				tokens.spacing.map((s) => [s.name, `\`${s.value}\``, s.usage]),
+			),
+		)
 	}
 
 	if (tokens.borderRadius.length > 0) {
 		lines.push("### Border Radius\n")
-		lines.push("| Name | Value |")
-		lines.push("|------|-------|")
-		for (const r of tokens.borderRadius) {
-			lines.push(`| ${r.name} | \`${r.value}\` |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value"],
+				tokens.borderRadius.map((r) => [r.name, `\`${r.value}\``]),
+			),
+		)
 	}
 
 	if (tokens.shadows.length > 0) {
 		lines.push("### Shadows\n")
-		lines.push("| Name | Value |")
-		lines.push("|------|-------|")
-		for (const s of tokens.shadows) {
-			lines.push(`| ${s.name} | \`${s.value}\` |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value"],
+				tokens.shadows.map((s) => [s.name, `\`${s.value}\``]),
+			),
+		)
 	}
 
 	if (tokens.motion && tokens.motion.length > 0) {
 		lines.push("### Motion\n")
-		lines.push("| Name | Duration | Easing | Usage |")
-		lines.push("|------|----------|--------|-------|")
-		for (const m of tokens.motion) {
-			lines.push(`| ${m.name} | ${m.duration} | ${m.easing} | ${m.usage} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Duration", "Easing", "Usage"],
+				tokens.motion.map((m) => [m.name, m.duration, m.easing, m.usage]),
+			),
+		)
 	}
 
 	if (tokens.breakpoints.length > 0) {
 		lines.push("### Breakpoints\n")
-		lines.push("| Name | Value |")
-		lines.push("|------|-------|")
-		for (const b of tokens.breakpoints) {
-			lines.push(`| ${b.name} | \`${b.value}\` |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value"],
+				tokens.breakpoints.map((b) => [b.name, `\`${b.value}\``]),
+			),
+		)
 	}
 
 	if (tokens.zIndex.length > 0) {
 		lines.push("### Z-Index\n")
-		lines.push("| Name | Value |")
-		lines.push("|------|-------|")
-		for (const z of tokens.zIndex) {
-			lines.push(`| ${z.name} | \`${z.value}\` |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value"],
+				tokens.zIndex.map((z) => [z.name, `\`${z.value}\``]),
+			),
+		)
 	}
 
 	lines.push(renderNotes(tokens.designNotes))
@@ -286,44 +293,48 @@ function renderTypography(typo: TypographySystem): string {
 
 	if (typo.scale.length > 0) {
 		lines.push("### Type Scale\n")
-		lines.push("| Name | Size | Line Height | Weight | Usage |")
-		lines.push("|------|------|-------------|--------|-------|")
-		for (const s of typo.scale) {
-			lines.push(
-				`| ${s.name} | ${s.fontSize} | ${s.lineHeight ?? "-"} | ${s.fontWeight ?? "-"} | ${s.usage} |`,
-			)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Size", "Line Height", "Weight", "Usage"],
+				typo.scale.map((s) => [
+					s.name,
+					s.fontSize,
+					s.lineHeight ?? "-",
+					s.fontWeight ?? "-",
+					s.usage,
+				]),
+			),
+		)
 	}
 
 	if (typo.fontWeights.length > 0) {
 		lines.push("### Font Weights\n")
-		lines.push("| Name | Value |")
-		lines.push("|------|-------|")
-		for (const w of typo.fontWeights) {
-			lines.push(`| ${w.name} | ${w.value} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value"],
+				typo.fontWeights.map((w) => [w.name, w.value]),
+			),
+		)
 	}
 
 	if (typo.lineHeights.length > 0) {
 		lines.push("### Line Heights\n")
-		lines.push("| Name | Value |")
-		lines.push("|------|-------|")
-		for (const lh of typo.lineHeights) {
-			lines.push(`| ${lh.name} | ${lh.value} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value"],
+				typo.lineHeights.map((lh) => [lh.name, lh.value]),
+			),
+		)
 	}
 
 	if (typo.letterSpacings && typo.letterSpacings.length > 0) {
 		lines.push("### Letter Spacings\n")
-		lines.push("| Name | Value | Usage |")
-		lines.push("|------|-------|-------|")
-		for (const ls of typo.letterSpacings) {
-			lines.push(`| ${ls.name} | ${ls.value} | ${ls.usage} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value", "Usage"],
+				typo.letterSpacings.map((ls) => [ls.name, ls.value, ls.usage]),
+			),
+		)
 	}
 
 	lines.push(renderNotes(typo.designNotes))
@@ -392,22 +403,22 @@ function renderLayout(layout: LayoutSystem): string {
 
 	if (layout.containers.length > 0) {
 		lines.push("### Containers\n")
-		lines.push("| Name | Max Width | Padding |")
-		lines.push("|------|-----------|---------|")
-		for (const c of layout.containers) {
-			lines.push(`| ${c.name} | ${c.maxWidth ?? "-"} | ${c.padding ?? "-"} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Max Width", "Padding"],
+				layout.containers.map((c) => [c.name, c.maxWidth ?? "-", c.padding ?? "-"]),
+			),
+		)
 	}
 
 	if (layout.grids.length > 0) {
 		lines.push("### Grid Systems\n")
-		lines.push("| Type | Columns | Gap |")
-		lines.push("|------|---------|-----|")
-		for (const g of layout.grids) {
-			lines.push(`| ${g.type} | ${g.columns ?? "-"} | ${g.gap ?? "-"} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Type", "Columns", "Gap"],
+				layout.grids.map((g) => [g.type, String(g.columns ?? "-"), g.gap ?? "-"]),
+			),
+		)
 	}
 
 	if (layout.navigation.length > 0) {
@@ -420,12 +431,12 @@ function renderLayout(layout: LayoutSystem): string {
 
 	if (layout.spacingRhythm && layout.spacingRhythm.length > 0) {
 		lines.push("### Spacing Rhythm\n")
-		lines.push("| Name | Value | Usage |")
-		lines.push("|------|-------|-------|")
-		for (const s of layout.spacingRhythm) {
-			lines.push(`| ${s.name} | ${s.value} | ${s.usage} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value", "Usage"],
+				layout.spacingRhythm.map((s) => [s.name, s.value, s.usage]),
+			),
+		)
 	}
 
 	lines.push(renderNotes(layout.designNotes))
@@ -481,12 +492,12 @@ function renderResponsive(rs: ResponsiveStrategy): string {
 
 	if (rs.breakpoints.length > 0) {
 		lines.push("### Breakpoints\n")
-		lines.push("| Name | Value |")
-		lines.push("|------|-------|")
-		for (const b of rs.breakpoints) {
-			lines.push(`| ${b.name} | ${b.value} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Value"],
+				rs.breakpoints.map((b) => [b.name, b.value]),
+			),
+		)
 	}
 
 	if (rs.patterns.length > 0) {
@@ -499,22 +510,22 @@ function renderResponsive(rs: ResponsiveStrategy): string {
 
 	if (rs.componentAdaptations && rs.componentAdaptations.length > 0) {
 		lines.push("### Component Adaptations\n")
-		lines.push("| Component | Breakpoint | Adaptation |")
-		lines.push("|-----------|------------|------------|")
-		for (const a of rs.componentAdaptations) {
-			lines.push(`| ${a.component} | ${a.breakpoint} | ${a.adaptation} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Component", "Breakpoint", "Adaptation"],
+				rs.componentAdaptations.map((a) => [a.component, a.breakpoint, a.adaptation]),
+			),
+		)
 	}
 
 	if (rs.layoutAdaptations && rs.layoutAdaptations.length > 0) {
 		lines.push("### Layout Adaptations\n")
-		lines.push("| Element | Breakpoint | Behavior |")
-		lines.push("|---------|------------|----------|")
-		for (const a of rs.layoutAdaptations) {
-			lines.push(`| ${a.layoutElement} | ${a.breakpoint} | ${a.behavior} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Element", "Breakpoint", "Behavior"],
+				rs.layoutAdaptations.map((a) => [a.layoutElement, a.breakpoint, a.behavior]),
+			),
+		)
 	}
 
 	lines.push(renderNotes(rs.designNotes))
@@ -531,24 +542,28 @@ function renderInteractions(ip: InteractionPatterns): string {
 
 	if (ip.animations.length > 0) {
 		lines.push("### Animations\n")
-		lines.push("| Name | Type | Duration | Easing | Trigger |")
-		lines.push("|------|------|----------|--------|---------|")
-		for (const a of ip.animations) {
-			lines.push(
-				`| ${a.name} | ${a.type} | ${a.duration ?? "-"} | ${a.easing ?? "-"} | ${a.trigger ?? "-"} |`,
-			)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Name", "Type", "Duration", "Easing", "Trigger"],
+				ip.animations.map((a) => [
+					a.name,
+					a.type,
+					a.duration ?? "-",
+					a.easing ?? "-",
+					a.trigger ?? "-",
+				]),
+			),
+		)
 	}
 
 	if (ip.transitions.length > 0) {
 		lines.push("### Transitions\n")
-		lines.push("| Property | Duration | Easing |")
-		lines.push("|----------|----------|--------|")
-		for (const t of ip.transitions) {
-			lines.push(`| ${t.property} | ${t.duration} | ${t.easing} |`)
-		}
-		lines.push("")
+		lines.push(
+			mdTable(
+				["Property", "Duration", "Easing"],
+				ip.transitions.map((t) => [t.property, t.duration, t.easing]),
+			),
+		)
 	}
 
 	if (ip.gestures.length > 0) {

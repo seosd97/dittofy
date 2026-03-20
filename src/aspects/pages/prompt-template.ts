@@ -1,4 +1,13 @@
 import type { PromptTemplateContext } from "@defs/templates.js"
+import {
+	buildBorderRadiusReference,
+	buildColorReferenceCompact,
+	buildComponentCatalogReference,
+	buildLayoutReferenceCompact,
+	buildShadowsReference,
+	buildSpacingReference,
+	buildTypographyReference,
+} from "@pipeline/assembly/design-reference-builders.js"
 import { buildEnvironmentSection } from "@pipeline/assembly/resolve-environment.js"
 import { buildFileStructureGuide } from "@pipeline/assembly/resolve-structure.js"
 import { buildArtifactsSection, buildContractSection } from "@pipeline/assembly/step-contracts.js"
@@ -102,120 +111,17 @@ function buildFullDesignReference(
 	layout: import("@defs/analysis.js").LayoutSystem | null,
 	components: import("@defs/analysis.js").ComponentCatalog | null,
 ): string {
-	const sections: string[] = []
+	const parts = [
+		tokens ? buildColorReferenceCompact(tokens) : "",
+		tokens ? buildSpacingReference(tokens) : "",
+		tokens ? buildBorderRadiusReference(tokens) : "",
+		tokens ? buildShadowsReference(tokens) : "",
+		buildTypographyReference(typo),
+		buildLayoutReferenceCompact(layout),
+		buildComponentCatalogReference(components),
+	].filter(Boolean)
 
-	// Colors summary
-	if (tokens) {
-		if (tokens.colorGroups && tokens.colorGroups.length > 0) {
-			sections.push("### Colors")
-			for (const group of tokens.colorGroups) {
-				const level = group.level ? ` (${group.level})` : ""
-				sections.push(`\n**${group.group}${level}**:`)
-				sections.push("| Name | Value | Usage |")
-				sections.push("|------|-------|-------|")
-				for (const t of group.tokens) {
-					sections.push(`| ${t.name} | \`${t.value}\` | ${t.usage} |`)
-				}
-			}
-		}
-
-		// Spacing
-		if (tokens.spacing.length > 0) {
-			sections.push("\n### Spacing")
-			sections.push("| Name | Value | Usage |")
-			sections.push("|------|-------|-------|")
-			for (const t of tokens.spacing) {
-				sections.push(`| ${t.name} | \`${t.value}\` | ${t.usage} |`)
-			}
-		}
-
-		// Border Radius
-		if (tokens.borderRadius.length > 0) {
-			sections.push("\n### Border Radius")
-			sections.push("| Name | Value |")
-			sections.push("|------|-------|")
-			for (const t of tokens.borderRadius) {
-				sections.push(`| ${t.name} | \`${t.value}\` |`)
-			}
-		}
-
-		// Shadows
-		if (tokens.shadows.length > 0) {
-			sections.push("\n### Shadows")
-			sections.push("| Name | Value |")
-			sections.push("|------|-------|")
-			for (const t of tokens.shadows) {
-				sections.push(`| ${t.name} | \`${t.value}\` |`)
-			}
-		}
-	}
-
-	// Typography
-	if (typo) {
-		if (typo.fontFamilyDefs && typo.fontFamilyDefs.length > 0) {
-			sections.push("\n### Font Families")
-			for (const f of typo.fontFamilyDefs) {
-				sections.push(`- **${f.name}** (${f.category}): \`${f.fallbackStack}\` — ${f.usage}`)
-			}
-		} else if (typo.fontFamilies.length > 0) {
-			sections.push("\n### Font Families")
-			for (const f of typo.fontFamilies) {
-				sections.push(`- ${f}`)
-			}
-		}
-
-		if (typo.scale.length > 0) {
-			sections.push("\n### Type Scale")
-			sections.push("| Name | Font Size | Line Height | Font Weight | Usage |")
-			sections.push("|------|-----------|-------------|-------------|-------|")
-			for (const s of typo.scale) {
-				sections.push(
-					`| ${s.name} | \`${s.fontSize}\` | ${s.lineHeight ? `\`${s.lineHeight}\`` : "—"} | ${s.fontWeight ?? "—"} | ${s.usage} |`,
-				)
-			}
-		}
-	}
-
-	// Layout
-	if (layout) {
-		sections.push(`\n### Layout\n**Approach**: ${layout.approach}`)
-
-		if (layout.containers.length > 0) {
-			for (const c of layout.containers) {
-				const maxW = c.maxWidth ? `max-width: \`${c.maxWidth}\`` : ""
-				const pad = c.padding ? `padding: \`${c.padding}\`` : ""
-				const dims = [maxW, pad].filter(Boolean).join(", ")
-				sections.push(`- **${c.name}**: ${dims}`)
-			}
-		}
-
-		if (layout.grids.length > 0) {
-			for (const g of layout.grids) {
-				const cols = g.columns ? `${g.columns} columns` : ""
-				const gap = g.gap ? `gap: \`${g.gap}\`` : ""
-				const details = [g.type, cols, gap].filter(Boolean).join(", ")
-				sections.push(`- Grid: ${details}`)
-			}
-		}
-	}
-
-	// Component catalog reference
-	if (components && components.components.length > 0) {
-		sections.push("\n### Component Catalog Reference")
-		sections.push(
-			"The following components were identified in the source design. Use them as inspiration for component structure and naming:",
-		)
-		const coreComponents = components.components.filter(
-			(c) => c.tier === "core" || c.tier === "design-system",
-		)
-		const toShow = coreComponents.length > 0 ? coreComponents : components.components.slice(0, 10)
-		for (const c of toShow) {
-			const variants = c.variants.length > 0 ? ` — variants: ${c.variants.join(", ")}` : ""
-			sections.push(`- **${c.name}** (${c.category}): ${c.description}${variants}`)
-		}
-	}
-
-	return sections.length > 0
-		? sections.join("\n")
+	return parts.length > 0
+		? parts.join("\n")
 		: "*No design data extracted. Create showcase pages with reasonable defaults that match the design essence.*"
 }

@@ -1,5 +1,7 @@
+import { LLMError } from "@defs/errors.js"
+
 /** Thrown when LLM returns parseable JSON that fails Zod schema validation. */
-export class SchemaValidationError extends Error {
+export class SchemaValidationError extends LLMError {
 	constructor(
 		public readonly schemaName: string,
 		public readonly validationMessage: string,
@@ -11,7 +13,7 @@ export class SchemaValidationError extends Error {
 }
 
 /** Thrown when LLM call ceiling is exceeded. */
-export class LLMCeilingError extends Error {
+export class LLMCeilingError extends LLMError {
 	constructor(
 		public readonly schemaName: string,
 		public readonly callCount: number,
@@ -23,7 +25,7 @@ export class LLMCeilingError extends Error {
 }
 
 /** Thrown when LLM output is truncated due to token limit. */
-export class TruncationError extends Error {
+export class TruncationError extends LLMError {
 	constructor(
 		public readonly schemaName: string,
 		public readonly finishReason: string,

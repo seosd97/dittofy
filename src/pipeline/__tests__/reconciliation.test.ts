@@ -47,10 +47,11 @@ describe("reconcileAnalysis", () => {
 
 		const report = reconcileAnalysis(results)
 		expect(report.conflicts.length).toBeGreaterThan(0)
-		expect(report.resolutions.length).toBeGreaterThan(0)
+		expect(report.conflicts[0].tokenValue).toBe("768px")
+		expect(report.conflicts[0].otherValue).toBe("800px")
 	})
 
-	it("resolves conflicts using aspect-1 (tokens win)", () => {
+	it("reports token value and other aspect in conflicts", () => {
 		const results = createResults({
 			designTokens: {
 				spacing: [],
@@ -66,7 +67,7 @@ describe("reconcileAnalysis", () => {
 		})
 
 		const report = reconcileAnalysis(results)
-		expect(report.resolutions.some((r) => r.source === "aspect-1")).toBe(true)
+		expect(report.conflicts[0].otherAspect).toBe("responsiveStrategy")
 	})
 
 	it("returns empty report when no aspects to compare", () => {
@@ -76,6 +77,5 @@ describe("reconcileAnalysis", () => {
 		})
 		const report = reconcileAnalysis(results)
 		expect(report.conflicts).toHaveLength(0)
-		expect(report.resolutions).toHaveLength(0)
 	})
 })
