@@ -1,26 +1,16 @@
 import type { TechStack } from "@defs/analysis.js"
-import type { CodeChunk, ConfigFile } from "@defs/extraction.js"
+import type { ProjectMeta } from "@defs/extraction.js"
 
-export function detectTechStack(configs: ConfigFile[], codeChunks: CodeChunk[]): TechStack {
-	const packageJson = configs.find((c) => c.type === "package")
-	const deps = packageJson ? parseDeps(packageJson.content) : {}
+export function detectTechStack(projectMeta: ProjectMeta): TechStack {
+	const deps = { ...projectMeta.dependencies, ...projectMeta.devDependencies }
 
 	return {
 		framework: detectFramework(deps),
-		language: detectLanguage(configs, codeChunks),
-		styling: detectStyling(deps, configs),
+		language: detectLanguage(projectMeta),
+		styling: detectStyling(deps),
 		uiLibrary: detectUILibrary(deps),
 		stateManagement: detectStateManagement(deps),
-		buildTool: detectBuildTool(deps, configs),
-	}
-}
-
-function parseDeps(packageJsonContent: string): Record<string, string> {
-	try {
-		const pkg = JSON.parse(packageJsonContent)
-		return { ...pkg.dependencies, ...pkg.devDependencies }
-	} catch {
-		return {}
+		buildTool: detectBuildTool(deps),
 	}
 }
 
@@ -36,20 +26,17 @@ function detectFramework(deps: Record<string, string>): TechStack["framework"] {
 	return { value: "Unknown", confidence: "low" }
 }
 
-function detectLanguage(configs: ConfigFile[], codeChunks: CodeChunk[]): TechStack["language"] {
-	const hasTsConfig = configs.some((c) => c.type === "tsconfig")
-	const tsFiles = codeChunks.filter((c) => c.extension === ".ts" || c.extension === ".tsx")
-	const jsFiles = codeChunks.filter((c) => c.extension === ".js" || c.extension === ".jsx")
-
-	if (hasTsConfig || tsFiles.length > jsFiles.length) {
+function detectLanguage(projectMeta: ProjectMeta): TechStack["language"] {
+	const allDeps = { ...projectMeta.dependencies, ...projectMeta.devDependencies }
+	if ("typescript" in allDeps) {
 		return { value: "TypeScript", confidence: "high" }
 	}
 	return { value: "JavaScript", confidence: "high" }
 }
 
-function detectStyling(deps: Record<string, string>, configs: ConfigFile[]): TechStack["styling"] {
+function detectStyling(deps: Record<string, string>): TechStack["styling"] {
 	// Tier 1: Tailwind or CSS Variables
-	if ("tailwindcss" in deps || configs.some((c) => c.type === "tailwind")) {
+	if ("tailwindcss" in deps) {
 		return { value: { approach: "Tailwind CSS", tier: 1 }, confidence: "high" }
 	}
 
@@ -67,14 +54,6 @@ function detectStyling(deps: Record<string, string>, configs: ConfigFile[]): Tec
 	// Tier 3: CSS-in-JS runtime
 	if ("@vanilla-extract/css" in deps) {
 		return { value: { approach: "Vanilla Extract", tier: 2 }, confidence: "high" }
-	}
-
-	// Check for CSS Modules usage in code
-	const hasCssModules = configs.some(
-		(c) => c.type === "vite" && c.content.includes("css") && c.content.includes("modules"),
-	)
-	if (hasCssModules) {
-		return { value: { approach: "CSS Modules", tier: 2 }, confidence: "medium" }
 	}
 
 	return { value: { approach: "Plain CSS", tier: 1 }, confidence: "low" }
@@ -102,11 +81,8 @@ function detectStateManagement(deps: Record<string, string>): TechStack["stateMa
 	return undefined
 }
 
-function detectBuildTool(
-	deps: Record<string, string>,
-	configs: ConfigFile[],
-): TechStack["buildTool"] {
-	if (configs.some((c) => c.type === "vite")) return { value: "Vite", confidence: "high" }
+function detectBuildTool(deps: Record<string, string>): TechStack["buildTool"] {
+	if ("vite" in deps) return { value: "Vite", confidence: "high" }
 	if ("next" in deps) return { value: "Next.js (Webpack/Turbopack)", confidence: "medium" }
 	if ("webpack" in deps) return { value: "Webpack", confidence: "high" }
 	if ("esbuild" in deps) return { value: "esbuild", confidence: "high" }

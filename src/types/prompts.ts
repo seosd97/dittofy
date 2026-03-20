@@ -1,3 +1,5 @@
+import type { StepDeclaration } from "./descriptor.js"
+
 export interface PromptSet {
 	steps: PromptStep[]
 	readme: string
@@ -14,9 +16,15 @@ export interface PromptStep {
 	estimatedComplexity: "low" | "medium" | "high"
 }
 
+export interface ResolvedStep {
+	planEntry: StepPlanEntry
+	declaration: StepDeclaration
+}
+
 export interface StepPlan {
 	totalSteps: number
 	steps: StepPlanEntry[]
+	resolved: ResolvedStep[]
 }
 
 export type StepType =

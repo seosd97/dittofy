@@ -1,33 +1,12 @@
+import type { PresetName } from "@llm/presets.js"
+import type { SystemPromptConfig } from "@llm/prompts.js"
 import type { z } from "zod"
 import type { AnalysisResult } from "./analysis.js"
 import type { AspectName, AspectTypeMap } from "./aspect-map.js"
-import type { FileCategory } from "./extraction.js"
-
-/** LLM 호출 프리셋 이름 */
-export type PresetName =
-	| "tokenAnalyzer"
-	| "typographyAnalyzer"
-	| "componentAnalyzer"
-	| "layoutAnalyzer"
-	| "pageAnalyzer"
-	| "responsiveAnalyzer"
-	| "interactionAnalyzer"
-	| "essenceSynthesizer"
-
-/** Analyzer에 전달할 컨텍스트 설정 */
-export interface ContextConfig {
-	filePriorities: FileCategory[]
-	mustIncludePatterns: RegExp[]
-	configRatio?: number
-	codeRatio?: number
-}
-
-/** 시스템 프롬프트 구성 */
-export interface SystemPromptConfig {
-	role: string
-	task: string
-	additionalPrinciples?: string[]
-	outputLanguage?: "ko" | "en"
+/** 청크 분할 분석의 개별 청크 대상 */
+export interface ChunkTarget {
+	label: string
+	context: string
 }
 
 /** Step 의존성 참조 (심볼릭) */
@@ -41,6 +20,8 @@ export interface StepDeclaration {
 	title: string
 	scope: string
 	dependsOn: StepDependencyRef[]
+	contract?: import("@pipeline/assembly/step-contracts.js").StepContract
+	renderPrompt?: (ctx: import("@defs/templates.js").PromptTemplateContext) => string
 }
 
 /** 문서 생성 선언 */
@@ -48,6 +29,7 @@ export interface DocDeclaration {
 	filename: string
 	title: string
 	category: "core" | "dynamic"
+	renderDoc?: (ctx: import("@defs/templates.js").TemplateContext) => string | null
 }
 
 /** Aspect Descriptor — 각 디자인 측면의 자기완결적 기술 */
@@ -61,8 +43,17 @@ export interface AspectDescriptor<K extends AspectName> {
 		schema: z.ZodType<AspectTypeMap[K]>
 		schemaName: string
 		schemaDescription: string
-		contextConfig: ContextConfig
 		promptConfig: SystemPromptConfig
+		/** Optional: 큰 스키마를 배치 단위로 분할하여 LLM 호출 후 병합 */
+		chunkedAnalysis?: {
+			chunkPreset: PresetName
+			chunkSchema: z.ZodType
+			chunkSchemaName: string
+			batchSize: number
+			extractChunks: (codeContext: string) => ChunkTarget[]
+			buildChunkPrompt: (basePrompt: string, chunk: ChunkTarget) => string
+			merge: (chunks: unknown[]) => AspectTypeMap[K]
+		}
 	}
 
 	/** Step Planning 설정 */

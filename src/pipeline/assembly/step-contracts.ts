@@ -178,12 +178,16 @@ export function buildContractSection(
 
 	if (contract.scanInstructions.length > 0) {
 		lines.push("")
-		lines.push("**Before writing any code**, scan the working directory to understand the current state:")
+		lines.push(
+			"**Before writing any code**, scan the working directory to understand the current state:",
+		)
 		for (const instruction of contract.scanInstructions) {
 			lines.push(`- ${instruction}`)
 		}
 		lines.push("")
-		lines.push("Build on the existing implementation. Do NOT recreate or duplicate what previous steps already created.")
+		lines.push(
+			"Build on the existing implementation. Do NOT recreate or duplicate what previous steps already created.",
+		)
 	}
 
 	if (contract.expects.length > 0) {

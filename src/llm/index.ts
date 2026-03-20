@@ -1,12 +1,11 @@
 export {
-	callLLM,
-	setLLMProvider,
+	LLMClient,
+	type ILLMClient,
 	tryExtractJSON,
-	type LLMCallOptions,
+	type LLMCallParams,
 	type LLMCallResult,
-} from "./core/client.js"
-export { createModel } from "./core/provider.js"
-export { withRetry, type RetryConfig } from "./core/retry.js"
+} from "./client.js"
+export { LLMCeilingError, SchemaValidationError, TruncationError } from "./errors.js"
 export {
 	PROVIDER_PROFILES,
 	TASK_PRESETS,
@@ -16,4 +15,7 @@ export {
 	type ResolvedCallConfig,
 	type TaskPreset,
 } from "./presets.js"
+export { buildSystemPrompt, type SystemPromptConfig } from "./prompts.js"
+export { withRetry, type RetryConfig } from "./retry.js"
+export { runAnalyzer, type RunAnalyzerOptions } from "./runner.js"
 export { UsageTracker } from "./usage.js"

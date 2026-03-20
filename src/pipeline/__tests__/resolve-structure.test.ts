@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest"
 import type { TechStack } from "@defs/analysis.js"
 import { resolveEnvironment } from "@pipeline/assembly/resolve-environment.js"
 import {
@@ -6,6 +5,7 @@ import {
 	buildFileStructureGuide,
 	resolveProjectStructure,
 } from "@pipeline/assembly/resolve-structure.js"
+import { describe, expect, it } from "vitest"
 
 // ── Helpers ──
 
@@ -283,11 +283,43 @@ describe("styleFiles.componentStylePattern", () => {
 		expect(s.styleFiles.componentStylePattern).toContain("Utility classes")
 	})
 
-	it("describes utility classes for plain CSS (fallback)", () => {
+	it("describes plain CSS for plain CSS (fallback)", () => {
 		const s = structureFor({
 			styling: { value: { approach: "Plain CSS", tier: 1 }, confidence: "high" },
 		})
-		expect(s.styleFiles.componentStylePattern).toContain("Utility classes")
+		expect(s.styleFiles.componentStylePattern).toContain("Plain CSS")
+	})
+})
+
+// ── Vanilla Extract ──
+
+describe("Vanilla Extract resolution", () => {
+	const s = structureFor({
+		styling: { value: { approach: "Vanilla Extract", tier: 2 }, confidence: "high" },
+	})
+
+	it("uses .css.ts extension for tokens file", () => {
+		expect(s.tokensFile).toBe("src/styles/tokens.css.ts")
+	})
+
+	it("uses .css.ts extension for globals file", () => {
+		expect(s.globalsFile).toBe("src/styles/globals.css.ts")
+	})
+
+	it("uses .css.ts extension for animations", () => {
+		expect(s.styleFiles.animations).toBe("src/styles/animations.css.ts")
+	})
+
+	it("describes co-located .css.ts component style pattern", () => {
+		expect(s.styleFiles.componentStylePattern).toContain(".css.ts")
+	})
+
+	it("has no styling config file", () => {
+		expect(s.stylingConfig).toBeNull()
+	})
+
+	it("uses classnames instead of cn", () => {
+		expect(s.utilFiles.cn).toContain("classnames")
 	})
 })
 

@@ -1,47 +1,44 @@
-import { confidenceLevelSchema, confident } from "@llm/schemas/common.js"
-import { consistencyMetricsSchema } from "@llm/schemas/consistency.js"
+import { consistencyMetricsSchema, designNotesSchema } from "@defs/schema-utils.js"
 import { z } from "zod"
 
-export const breakpointOverrideSchema = z.object({
+const breakpointOverrideSchema = z.object({
 	breakpoint: z.string(),
-	maxWidth: z.string().optional(),
-	padding: z.string().optional(),
-	columns: z.number().optional(),
-	gap: z.string().optional(),
+	maxWidth: z.string().nullable().optional(),
+	padding: z.string().nullable().optional(),
+	columns: z.number().nullable().optional(),
+	gap: z.string().nullable().optional(),
 })
 
-export const spacingRhythmSchema = z.object({
+const spacingRhythmSchema = z.object({
 	name: z.string().describe("e.g., section-gap, component-gap, element-gap"),
 	value: z.string(),
 	usage: z.string(),
 })
 
-export const layoutContainerSchema = z.object({
+const layoutContainerSchema = z.object({
 	name: z.string(),
-	maxWidth: z.string().optional(),
-	padding: z.string().optional(),
-	confidence: confidenceLevelSchema,
-	responsiveOverrides: z.array(breakpointOverrideSchema).optional(),
+	maxWidth: z.string().nullable().optional(),
+	padding: z.string().nullable().optional(),
+	responsiveOverrides: z.array(breakpointOverrideSchema).nullable().optional(),
 })
 
-export const gridSystemSchema = z.object({
+const gridSystemSchema = z.object({
 	type: z.enum(["css-grid", "flexbox", "both"]),
-	columns: z.number().optional(),
-	gap: z.string().optional(),
-	confidence: confidenceLevelSchema,
+	columns: z.number().nullable().optional(),
+	gap: z.string().nullable().optional(),
 })
 
-export const navigationPatternSchema = z.object({
+const navigationPatternSchema = z.object({
 	type: z.string(),
 	description: z.string(),
-	confidence: confidenceLevelSchema,
 })
 
 export const layoutSystemSchema = z.object({
-	approach: confident(z.string()),
+	approach: z.string(),
 	containers: z.array(layoutContainerSchema),
 	grids: z.array(gridSystemSchema),
 	navigation: z.array(navigationPatternSchema),
-	spacingRhythm: z.array(spacingRhythmSchema).optional(),
-	consistency: consistencyMetricsSchema.optional(),
+	spacingRhythm: z.array(spacingRhythmSchema).nullable().optional(),
+	consistency: consistencyMetricsSchema.nullable().optional(),
+	designNotes: designNotesSchema,
 })

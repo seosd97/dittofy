@@ -10,7 +10,6 @@ function createMinimalAnalysis(overrides: Partial<AnalysisResult> = {}): Analysi
 			styling: { value: { approach: "Tailwind CSS", tier: 1 }, confidence: "high" },
 		},
 		designTokens: {
-			colors: [],
 			spacing: [],
 			borderRadius: [],
 			shadows: [],
@@ -18,21 +17,21 @@ function createMinimalAnalysis(overrides: Partial<AnalysisResult> = {}): Analysi
 			zIndex: [],
 		},
 		typography: {
-			fontFamilies: { value: ["Inter"], confidence: "high" },
+			fontFamilies: ["Inter"],
 			scale: [],
 			lineHeights: [],
 			fontWeights: [],
 		},
 		componentCatalog: { components: [], patterns: [] },
 		layoutSystem: {
-			approach: { value: "flexbox", confidence: "high" },
+			approach: "flexbox",
 			containers: [],
 			grids: [],
 			navigation: [],
 		},
 		pageStructures: { pages: [] },
 		responsiveStrategy: {
-			approach: { value: "mobile-first", confidence: "high" },
+			approach: "mobile-first",
 			breakpoints: [],
 			patterns: [],
 		},
@@ -46,6 +45,7 @@ function createMinimalAnalysis(overrides: Partial<AnalysisResult> = {}): Analysi
 			layoutStrategy: "",
 			componentStrategy: "",
 			interactionStrategy: "",
+			appType: "marketing",
 		},
 		failedAnalyzers: [],
 		...overrides,
@@ -93,7 +93,6 @@ describe("planDocuments", () => {
 							layout: "default",
 							sections: [],
 							components: [],
-							confidence: "high",
 						},
 					],
 				},
@@ -108,8 +107,8 @@ describe("planDocuments", () => {
 		const plan = planDocuments(
 			createMinimalAnalysis({
 				responsiveStrategy: {
-					approach: { value: "mobile-first", confidence: "high" },
-					breakpoints: [{ name: "sm", value: "640px", confidence: "high" }],
+					approach: "mobile-first",
+					breakpoints: [{ name: "sm", value: "640px" }],
 					patterns: [],
 				},
 			}),
@@ -131,7 +130,6 @@ describe("planDocuments", () => {
 							layout: "default",
 							sections: [],
 							components: [],
-							confidence: "high",
 						},
 					],
 				},
@@ -147,9 +145,7 @@ describe("planDocuments", () => {
 		const plan = planDocuments(
 			createMinimalAnalysis({
 				interactionPatterns: {
-					animations: [
-						{ name: "fadeIn", type: "entrance", description: "Fade in", confidence: "high" },
-					],
+					animations: [{ name: "fadeIn", type: "entrance", description: "Fade in" }],
 					transitions: [],
 					gestures: [],
 				},

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { withRetry } from "../core/retry.js"
+import { withRetry } from "../retry.js"
 
 function createStatusError(statusCode: number, message = "error"): Error {
 	const error = new Error(message) as Error & { statusCode: number }

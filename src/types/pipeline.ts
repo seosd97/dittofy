@@ -14,6 +14,8 @@ export interface PipelineContext {
 	projectName: string
 	outputDir: string
 	startTime: number
+	llmClient: import("@llm/client.js").ILLMClient
+	usage: import("@llm/usage.js").UsageTracker
 }
 
 export type PhaseStatus = "pending" | "running" | "completed" | "failed" | "partial"

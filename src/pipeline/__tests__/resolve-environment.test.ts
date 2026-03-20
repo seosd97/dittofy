@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest"
 import type { TechStack } from "@defs/analysis.js"
 import {
 	buildEnvironmentSection,
 	resolveEnvironment,
 } from "@pipeline/assembly/resolve-environment.js"
+import { describe, expect, it } from "vitest"
 
 function createTechStack(overrides: Partial<TechStack> = {}): TechStack {
 	return {
@@ -56,7 +56,7 @@ describe("resolveEnvironment", () => {
 				styling: { value: { approach: "SCSS", tier: 2 }, confidence: "high" },
 			}),
 		)
-		expect(env.tokenStrategy).toContain("CSS custom properties")
+		expect(env.tokenStrategy).toContain("SCSS variables")
 	})
 
 	it("resolves theme object token strategy for Styled Components", () => {

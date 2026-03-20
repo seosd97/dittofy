@@ -1,42 +1,58 @@
 import { access, readFile } from "node:fs/promises"
 import { join } from "node:path"
 import type { TechStack } from "@defs/analysis.js"
-import type { ExtractionResult, ProjectMeta } from "@defs/extraction.js"
+import type { ExtractionResult, MonorepoContext, ProjectMeta } from "@defs/extraction.js"
 import type { PhaseError, PhaseResult } from "@defs/pipeline.js"
 import { phaseFail, phaseStart, phaseSuccess } from "@utils/logger.js"
-import { extractCode } from "./code-extractor.js"
-import { extractConfigs } from "./config-extractor.js"
-import { scanFiles } from "./file-scanner.js"
+import { buildFileTree, scanFiles } from "./file-scanner.js"
 import { detectTechStack } from "./tech-stack-detector.js"
+
+export { buildFileTree } from "./file-scanner.js"
+export { findMonorepoRoot } from "./workspace-detector.js"
 
 export interface ExtractionOutput {
 	extraction: ExtractionResult
 	techStack: TechStack
+	monorepo: MonorepoContext
 }
 
-export async function runExtraction(repoPath: string): Promise<PhaseResult<ExtractionOutput>> {
+export async function runExtraction(
+	repoPath: string,
+	monorepoInfo?: { rootPath: string; targetRelative: string },
+): Promise<PhaseResult<ExtractionOutput>> {
 	const startTime = Date.now()
 	const errors: PhaseError[] = []
 
 	try {
 		const scanResult = await scanFiles(repoPath)
-		phaseStart("Phase 1", `Scanned ${scanResult.stats.relevant} relevant files`)
+		phaseStart("Phase 1", `Scanned ${scanResult.stats.totalScanned} files`)
 
-		const codeChunks = await extractCode(repoPath, scanResult.relevantFiles)
-		const configFiles = await extractConfigs(repoPath, scanResult.configFiles)
-		const techStack = detectTechStack(configFiles, codeChunks)
+		// File tree: from rootPath if monorepo (deeper depth), otherwise from repoPath
+		const fileTree = monorepoInfo
+			? await buildFileTree(monorepoInfo.rootPath, 0, 7)
+			: scanResult.fileTree
+
 		const projectMeta = await buildProjectMeta(repoPath)
+		const techStack = detectTechStack(projectMeta)
+
+		const rootPath = monorepoInfo?.rootPath ?? repoPath
+		const targetRelative = monorepoInfo?.targetRelative ?? ""
 
 		const extraction: ExtractionResult = {
 			projectMeta,
-			fileTree: scanResult.fileTree,
-			codeChunks,
-			configFiles,
+			fileTree,
+		}
+
+		const monorepo: MonorepoContext = {
+			isMonorepo: !!monorepoInfo,
+			rootPath,
+			targetPath: repoPath,
+			targetRelative,
 		}
 
 		return {
 			status: "completed",
-			data: { extraction, techStack },
+			data: { extraction, techStack, monorepo },
 			errors,
 			duration: Date.now() - startTime,
 		}

@@ -75,9 +75,7 @@ export function generateReadme(promptSet: PromptSet, env: EnvironmentProfile): s
 	lines.push("3. **Context** — design analysis data to reference")
 	lines.push("4. **Instructions** — implementation guidance")
 	lines.push("5. **Design Reference** — extracted design specs (colors, spacing, typography, etc.)")
-	lines.push(
-		"6. **Expected Outcome** — what must exist after completion + artifact checklist",
-	)
+	lines.push("6. **Expected Outcome** — what must exist after completion + artifact checklist")
 	lines.push("7. **Validation** — how to verify correctness")
 	lines.push("")
 
@@ -136,7 +134,30 @@ export function generateReadme(promptSet: PromptSet, env: EnvironmentProfile): s
 		lines.push("")
 	}
 
+	// ── Agent Usage Guide ──
+	lines.push(buildAgentGuide())
+
 	return lines.join("\n")
+}
+
+function buildAgentGuide(): string {
+	return `## Agent Usage Guide
+
+### Recommended Workflow
+- **Run each step in a separate agent session** for best results. This prevents context overflow and allows focused execution.
+- Steps are designed to be independent — each step scans the project to understand what previous steps created.
+- If a step fails, you can re-run just that step without redoing earlier steps.
+
+### Error Recovery
+- If a step produces incorrect output, re-run it with additional guidance in the prompt.
+- The "Prerequisites" and "Scan Instructions" sections tell the agent exactly what to look for before writing code.
+- Each step's "Expected Outcome" section serves as a checklist for verification.
+
+### Tips
+- Copy each step's markdown prompt directly into a new AI agent session.
+- The agent should read the project's current state before making changes (the scan instructions help with this).
+- After each step, verify the "Validation" checklist before proceeding to the next step.
+`
 }
 
 function buildEnvironmentLine(env: EnvironmentProfile): string {

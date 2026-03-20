@@ -1,9 +1,8 @@
+import { getTargetPreset } from "@config/target-presets.js"
 import type { TechStack } from "@defs/analysis.js"
 import { logger } from "@utils/logger.js"
-import {
-	type ProjectStructure,
-	resolveProjectStructure,
-} from "./resolve-structure.js"
+import { type ProjectStructure, resolveProjectStructure } from "./resolve-structure.js"
+import { resolveStylingProfile } from "./styling-profiles.js"
 
 export interface EnvironmentProfile {
 	/** Whether the target is an existing project or a new one */
@@ -30,18 +29,49 @@ export interface EnvironmentProfile {
  * Resolves environment profile from the analyzed tech stack.
  * Called once before prompt generation; result is shared across all generators.
  */
-export function resolveEnvironment(techStack: TechStack): EnvironmentProfile {
+export function resolveEnvironment(
+	techStack: TechStack,
+	targetOverride?: string,
+): EnvironmentProfile {
+	// If target override is provided, use the preset
+	if (targetOverride) {
+		const preset = getTargetPreset(targetOverride)
+		if (preset) {
+			const stylingProfile = resolveStylingProfile(preset.styling)
+
+			const env: EnvironmentProfile = {
+				mode: "greenfield",
+				framework: preset.framework,
+				language: preset.language,
+				styling: preset.styling,
+				buildTool: preset.buildTool,
+				uiLibrary: preset.uiLibrary,
+				tokenStrategy: stylingProfile.tokenStrategy,
+				summary: `Target: ${preset.id} (${preset.framework} + ${preset.styling})`,
+				structure: undefined as unknown as ProjectStructure,
+			}
+
+			env.structure = resolveProjectStructure(env)
+
+			logger.info(`Environment: greenfield — ${env.summary}`)
+
+			return env
+		}
+		// Unknown target — log warning and fall through to auto-detection
+		logger.warn(`Unknown target preset: ${targetOverride}, falling back to auto-detection`)
+	}
+
 	const framework = techStack.framework.value
 	const language = techStack.language.value
 	const styling = techStack.styling.value.approach
 	const buildTool = techStack.buildTool?.value ?? null
 	const uiLibrary = techStack.uiLibrary?.value ?? null
 
-	const hasConfidentFramework =
-		techStack.framework.confidence !== "low" && framework !== "Unknown"
+	const hasConfidentFramework = techStack.framework.confidence !== "low" && framework !== "Unknown"
 
 	const mode = hasConfidentFramework ? "existing-project" : "greenfield"
-	const tokenStrategy = resolveTokenStrategy(styling)
+	const profile = resolveStylingProfile(styling)
+	const tokenStrategy = profile.tokenStrategy
 
 	const summary = buildSummaryLine(mode, framework, language, styling, buildTool)
 
@@ -64,25 +94,6 @@ export function resolveEnvironment(techStack: TechStack): EnvironmentProfile {
 	return env
 }
 
-function resolveTokenStrategy(styling: string): string {
-	const lower = styling.toLowerCase()
-
-	if (lower.includes("tailwind")) {
-		return "Define tokens in tailwind.config (theme.extend) and use CSS variables for runtime access"
-	}
-	if (lower.includes("css modules") || lower.includes("scss") || lower.includes("plain css")) {
-		return "Define tokens as CSS custom properties in a global stylesheet (:root variables)"
-	}
-	if (lower.includes("styled") || lower.includes("emotion")) {
-		return "Define tokens as a theme object passed through ThemeProvider"
-	}
-	if (lower.includes("vanilla extract")) {
-		return "Define tokens using createThemeContract and createTheme"
-	}
-
-	return "Define tokens as CSS custom properties in a global stylesheet (:root variables)"
-}
-
 function buildSummaryLine(
 	mode: string,
 	framework: string,
@@ -96,7 +107,7 @@ function buildSummaryLine(
 
 	return mode === "existing-project"
 		? `Existing project: ${stack}`
-		: `New project (stack to be chosen by agent)`
+		: "New project (stack to be chosen by agent)"
 }
 
 /**

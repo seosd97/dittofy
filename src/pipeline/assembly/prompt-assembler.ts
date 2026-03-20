@@ -1,12 +1,11 @@
+import { COMPLEXITY_THRESHOLDS } from "@config/analysis.js"
 import type { AnalysisResult } from "@defs/analysis.js"
 import type { PromptSet, PromptStep } from "@defs/prompts.js"
 import type { PromptTemplateContext } from "@defs/templates.js"
-import { COMPLEXITY_THRESHOLDS } from "@config/analysis.js"
 import { planSteps } from "@pipeline/planners/steps.js"
 import { logger } from "@utils/logger.js"
-import type { EnvironmentProfile } from "./resolve-environment.js"
-import { PROMPT_TEMPLATES } from "./prompt-templates/index.js"
 import { generateReadme } from "./readme-gen.js"
+import type { EnvironmentProfile } from "./resolve-environment.js"
 
 const CRITICAL_STEPS = new Set(["setup", "design-tokens", "typography"])
 
@@ -21,9 +20,12 @@ export function assemblePrompts(
 
 	const steps: PromptStep[] = []
 
-	for (const planEntry of stepPlan.steps) {
-		const template = PROMPT_TEMPLATES[planEntry.stepType]
-		if (!template) continue
+	for (const { planEntry, declaration } of stepPlan.resolved) {
+		const template = declaration.renderPrompt
+		if (!template) {
+			logger.warn(`No renderPrompt for step "${planEntry.stepType}" — skipping`)
+			continue
+		}
 
 		const ctx: PromptTemplateContext = {
 			analysis,

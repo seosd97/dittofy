@@ -1,8 +1,13 @@
 export interface ExtractionResult {
 	projectMeta: ProjectMeta
 	fileTree: FileTreeNode[]
-	codeChunks: CodeChunk[]
-	configFiles: ConfigFile[]
+}
+
+export interface MonorepoContext {
+	isMonorepo: boolean
+	rootPath: string
+	targetPath: string
+	targetRelative: string
 }
 
 export interface ProjectMeta {
@@ -21,45 +26,9 @@ export interface FileTreeNode {
 	children?: FileTreeNode[]
 }
 
-export type FileCategory =
-	| "component"
-	| "page"
-	| "layout"
-	| "style"
-	| "config"
-	| "util"
-	| "hook"
-	| "context"
-	| "store"
-	| "type"
-	| "test"
-	| "asset"
-	| "public"
-	| "route"
-	| "api"
-	| "other"
-
 export interface CodeChunk {
 	filePath: string
 	content: string
-	category: FileCategory
 	extension: string
 	size: number
-}
-
-export interface ConfigFile {
-	name: string
-	filePath: string
-	content: string
-	type:
-		| "tailwind"
-		| "postcss"
-		| "tsconfig"
-		| "package"
-		| "vite"
-		| "next"
-		| "svelte"
-		| "astro"
-		| "nuxt"
-		| "other"
 }

@@ -1,6 +1,6 @@
 import { defineCommand } from "citty"
 import { loadDittoConfig } from "../../config/index.js"
-import { runPipeline } from "../../pipeline/orchestrator.js"
+import { runAnalysisPipeline, runPipeline } from "../../pipeline/orchestrator.js"
 import { UserError } from "../../types/errors.js"
 import { logger, setDebugMode } from "../../utils/logger.js"
 import { formatResult } from "../formatter.js"
@@ -36,6 +36,10 @@ export const analyzeCommand = defineCommand({
 			alias: "l",
 			description: "Output language: ko or en (default: ko)",
 		},
+		"analyze-only": {
+			type: "boolean",
+			description: "Run analysis only — generate analysis.json without docs/prompts",
+		},
 		"docs-only": {
 			type: "boolean",
 			description: "Generate only design spec documents (skip prompts)",
@@ -43,6 +47,10 @@ export const analyzeCommand = defineCommand({
 		"prompts-only": {
 			type: "boolean",
 			description: "Generate only implementation prompts (skip docs)",
+		},
+		include: {
+			type: "string",
+			description: "Additional directories to include in analysis (comma-separated, for monorepo)",
 		},
 		debug: {
 			type: "boolean",
@@ -69,7 +77,35 @@ export const analyzeCommand = defineCommand({
 			promptsOnly: args["prompts-only"],
 		})
 
+		if (args.include) {
+			logger.info(`Include paths: ${args.include}`)
+			// TODO: Wire up --include paths to extraction
+		}
+
 		logger.info(`Ditto v0.1.0 — Analyzing: ${source}`)
+
+		if (args["analyze-only"]) {
+			const result = await runAnalysisPipeline(source, config)
+
+			if (result.success) {
+				logger.info(`Analysis complete in ${(result.duration / 1000).toFixed(1)}s`)
+				logger.info(`Output: ${result.outputDir}`)
+				logger.info("  analysis.md  — design system summary")
+				logger.info("  analysis.json — structured data (for ditto generate)")
+				if (result.usage) {
+					logger.info(
+						`LLM usage: ${result.usage.totalCalls} calls, ${result.usage.totalTokens.toLocaleString()} tokens`,
+					)
+				}
+			} else {
+				logger.error("Analysis failed:")
+				for (const error of result.errors) {
+					logger.error(`  ${error.phase}: ${error.message}`)
+				}
+				process.exitCode = 1
+			}
+			return
+		}
 
 		const result = await runPipeline(source, config)
 		formatResult(result)

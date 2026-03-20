@@ -1,11 +1,9 @@
-import { ASPECT_NAMES } from "@aspects/registry.js"
-import type { AspectName } from "@defs/aspect-map.js"
-import type { DocumentEntry, DocumentSet } from "@defs/documentation.js"
+import { ASPECT_NAMES, ASPECT_REGISTRY } from "@aspects/registry.js"
 import type { AnalysisResult } from "@defs/analysis.js"
+import type { DocumentEntry, DocumentSet } from "@defs/documentation.js"
 import type { TemplateContext } from "@defs/templates.js"
 import { logger } from "@utils/logger.js"
 import type { EnvironmentProfile } from "./resolve-environment.js"
-import { DOC_TEMPLATES } from "./doc-templates/index.js"
 
 export function assembleDocuments(
 	analysis: AnalysisResult,
@@ -23,20 +21,22 @@ export function assembleDocuments(
 	const documents: DocumentEntry[] = []
 
 	for (const name of ASPECT_NAMES) {
-		const entry = DOC_TEMPLATES[name as AspectName]
-		if (!entry) continue
-		try {
-			const content = entry.template(ctx)
-			if (!content) continue
-			documents.push({
-				filename: entry.filename,
-				title: entry.title,
-				content,
-				category: entry.category,
-			})
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error)
-			logger.warn(`Doc template for ${name} failed: ${message}`)
+		const descriptor = ASPECT_REGISTRY[name]
+		for (const doc of descriptor.planning.docs) {
+			if (!doc.renderDoc) continue
+			try {
+				const content = doc.renderDoc(ctx)
+				if (!content) continue
+				documents.push({
+					filename: doc.filename,
+					title: doc.title,
+					content,
+					category: doc.category,
+				})
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error)
+				logger.warn(`Doc template for ${name} (${doc.filename}) failed: ${message}`)
+			}
 		}
 	}
 

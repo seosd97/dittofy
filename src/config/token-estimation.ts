@@ -19,8 +19,5 @@ export const CJK_RANGES: readonly [number, number][] = [
 export const CONTEXT_BUDGET = {
 	defaultTokenBudget: 30_000,
 	maxFilesPerAnalyzer: 50,
-	/** Budget ratio: config gets 20%, code gets 70%, rest is structure */
-	configRatio: 0.2,
-	codeRatio: 0.7,
 	maxSummaryTokens: 8_000,
 } as const

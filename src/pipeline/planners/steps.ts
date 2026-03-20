@@ -1,7 +1,9 @@
 import { ASPECT_NAMES, ASPECT_REGISTRY } from "@aspects/registry.js"
 import type { AnalysisResult } from "@defs/analysis.js"
 import type { StepDeclaration, StepDependencyRef } from "@defs/descriptor.js"
-import type { StepPlan, StepPlanEntry } from "@defs/prompts.js"
+import type { ResolvedStep, StepPlan, StepPlanEntry } from "@defs/prompts.js"
+import { renderSetupPrompt } from "@pipeline/assembly/setup-prompt.js"
+import { getStepContract } from "@pipeline/assembly/step-contracts.js"
 import { logger } from "@utils/logger.js"
 
 const MAX_STEPS = 12
@@ -13,18 +15,8 @@ const INFRA_STEPS: StepDeclaration[] = [
 		title: "Project Setup",
 		scope: "Initialize project with correct framework, dependencies, and build tooling",
 		dependsOn: [],
-	},
-	{
-		stepType: "design-tokens",
-		title: "Design Tokens",
-		scope: "Implement design tokens: color palette, spacing scale, border radius, shadows, z-index, and global base styles",
-		dependsOn: [{ kind: "type", stepType: "setup" }],
-	},
-	{
-		stepType: "typography",
-		title: "Typography",
-		scope: "Implement typography system: font families, type scale (headings, body, caption), font weights, line heights, and typographic rhythm",
-		dependsOn: [{ kind: "type", stepType: "design-tokens" }],
+		contract: getStepContract("setup"),
+		renderPrompt: renderSetupPrompt,
 	},
 ]
 
@@ -45,6 +37,7 @@ export function planSteps(analysis: AnalysisResult): StepPlan {
 
 	// Pass 2: Assign step numbers and resolve dependencies
 	const entries: StepPlanEntry[] = []
+	const resolved: ResolvedStep[] = []
 	const stepsByType = new Map<string, number[]>()
 
 	for (let i = 0; i < declarations.length && i < MAX_STEPS; i++) {
@@ -59,13 +52,16 @@ export function planSteps(analysis: AnalysisResult): StepPlan {
 		// Resolve symbolic dependencies
 		const dependencies = resolveDependencies(decl.dependsOn, stepsByType)
 
-		entries.push({
+		const entry: StepPlanEntry = {
 			stepNumber,
 			stepType: decl.stepType as StepPlanEntry["stepType"],
 			title: decl.title,
 			scope: decl.scope,
 			dependencies,
-		})
+		}
+
+		entries.push(entry)
+		resolved.push({ planEntry: entry, declaration: decl })
 	}
 
 	if (analysis.failedAnalyzers.length > 0) {
@@ -77,6 +73,7 @@ export function planSteps(analysis: AnalysisResult): StepPlan {
 	return {
 		totalSteps: entries.length,
 		steps: entries,
+		resolved,
 	}
 }
 

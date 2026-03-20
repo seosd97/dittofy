@@ -9,9 +9,7 @@
 	"exports": {
 		".": "./dist/index.mjs"
 	},
-	"files": [
-		"dist"
-	],
+	"files": ["dist"],
 	"scripts": {
 		"dev": "tsx src/cli/index.ts",
 		"build": "tsdown",
@@ -26,14 +24,7 @@
 	"engines": {
 		"node": ">=20.0.0"
 	},
-	"keywords": [
-		"design-system",
-		"frontend",
-		"analysis",
-		"ai",
-		"code-generation",
-		"cli"
-	],
+	"keywords": ["design-system", "frontend", "analysis", "ai", "code-generation", "cli"],
 	"license": "MIT",
 	"dependencies": {
 		"ai": "^6.0.0",
@@ -55,10 +46,7 @@
 		"@types/node": "^22.0.0"
 	},
 	"pnpm": {
-		"onlyBuiltDependencies": [
-			"@biomejs/biome",
-			"esbuild"
-		]
+		"onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
 	},
 	"packageManager": "pnpm@10.25.0+sha512.5e82639027af37cf832061bcc6d639c219634488e0f2baebe785028a793de7b525ffcd3f7ff574f5e9860654e098fe852ba8ac5dd5cefe1767d23a020a92f501"
 }

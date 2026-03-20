@@ -2,16 +2,16 @@ import type { AnalysisResult, ComponentInfo } from "@defs/analysis.js"
 import { planSteps } from "@pipeline/planners/steps.js"
 import { describe, expect, it } from "vitest"
 
-function makeComponent(name: string, tier: "core" | "design-system" | "domain" = "core"): ComponentInfo {
+function makeComponent(
+	name: string,
+	tier: "core" | "design-system" | "domain" = "core",
+): ComponentInfo {
 	return {
 		name,
-		filePath: `src/components/${name}.tsx`,
 		category: "atom",
 		tier,
-		props: [],
 		variants: [],
 		description: `${name} component`,
-		confidence: "high",
 	}
 }
 
@@ -38,6 +38,7 @@ function createMinimalAnalysis(overrides: Partial<AnalysisResult> = {}): Analysi
 			layoutStrategy: "",
 			componentStrategy: "",
 			interactionStrategy: "",
+			appType: "marketing",
 		},
 		failedAnalyzers: [],
 		...overrides,
@@ -73,9 +74,9 @@ describe("planSteps", () => {
 		const plan = planSteps(
 			createMinimalAnalysis({
 				layoutSystem: {
-					approach: { value: "CSS Grid + Flexbox", confidence: "high" },
-					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem", confidence: "high" }],
-					grids: [{ type: "css-grid", columns: 12, gap: "1rem", confidence: "high" }],
+					approach: "CSS Grid + Flexbox",
+					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem" }],
+					grids: [{ type: "css-grid", columns: 12, gap: "1rem" }],
 					navigation: [],
 				},
 			}),
@@ -91,8 +92,8 @@ describe("planSteps", () => {
 		const plan = planSteps(
 			createMinimalAnalysis({
 				layoutSystem: {
-					approach: { value: "CSS Grid", confidence: "high" },
-					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem", confidence: "high" }],
+					approach: "CSS Grid",
+					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem" }],
 					grids: [],
 					navigation: [],
 				},
@@ -118,11 +119,9 @@ describe("planSteps", () => {
 		const plan = planSteps(
 			createMinimalAnalysis({
 				responsiveStrategy: {
-					approach: { value: "mobile-first", confidence: "high" },
-					breakpoints: [{ name: "sm", value: "640px", confidence: "high" }],
-					patterns: [
-						{ name: "stack", description: "Stack on mobile", breakpoint: "sm", confidence: "high" },
-					],
+					approach: "mobile-first",
+					breakpoints: [{ name: "sm", value: "640px" }],
+					patterns: [{ name: "stack", description: "Stack on mobile", breakpoint: "sm" }],
 				},
 			}),
 		)
@@ -135,8 +134,8 @@ describe("planSteps", () => {
 		const plan = planSteps(
 			createMinimalAnalysis({
 				responsiveStrategy: {
-					approach: { value: "mobile-first", confidence: "high" },
-					breakpoints: [{ name: "sm", value: "640px", confidence: "high" }],
+					approach: "mobile-first",
+					breakpoints: [{ name: "sm", value: "640px" }],
 					patterns: [],
 				},
 			}),
@@ -150,9 +149,7 @@ describe("planSteps", () => {
 		const plan = planSteps(
 			createMinimalAnalysis({
 				interactionPatterns: {
-					animations: [
-						{ name: "fadeIn", type: "entrance", description: "Fade", confidence: "high" },
-					],
+					animations: [{ name: "fadeIn", type: "entrance", description: "Fade" }],
 					transitions: [],
 					gestures: [],
 				},
@@ -167,20 +164,18 @@ describe("planSteps", () => {
 		const plan = planSteps(
 			createMinimalAnalysis({
 				layoutSystem: {
-					approach: { value: "CSS Grid", confidence: "high" },
-					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem", confidence: "high" }],
+					approach: "CSS Grid",
+					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem" }],
 					grids: [],
 					navigation: [],
 				},
 				responsiveStrategy: {
-					approach: { value: "mobile-first", confidence: "high" },
-					breakpoints: [{ name: "sm", value: "640px", confidence: "high" }],
-					patterns: [{ name: "stack", description: "Stack", breakpoint: "sm", confidence: "high" }],
+					approach: "mobile-first",
+					breakpoints: [{ name: "sm", value: "640px" }],
+					patterns: [{ name: "stack", description: "Stack", breakpoint: "sm" }],
 				},
 				interactionPatterns: {
-					animations: [
-						{ name: "fadeIn", type: "entrance", description: "Fade", confidence: "high" },
-					],
+					animations: [{ name: "fadeIn", type: "entrance", description: "Fade" }],
 					transitions: [],
 					gestures: [],
 				},
@@ -195,8 +190,8 @@ describe("planSteps", () => {
 		const plan = planSteps(
 			createMinimalAnalysis({
 				layoutSystem: {
-					approach: { value: "CSS Grid", confidence: "high" },
-					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem", confidence: "high" }],
+					approach: "CSS Grid",
+					containers: [{ name: "main", maxWidth: "1200px", padding: "1rem" }],
 					grids: [],
 					navigation: [],
 				},

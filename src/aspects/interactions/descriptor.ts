@@ -1,7 +1,10 @@
 import { defineAspect } from "@aspects/define-aspect.js"
 import type { AnalysisResult } from "@defs/analysis.js"
 import type { StepDeclaration } from "@defs/descriptor.js"
-import { INTERACTION_ANALYZER_CONFIG } from "./prompts.js"
+import { INTERACTION_ANALYZER_CONFIG } from "@llm/prompts.js"
+import { getStepContract } from "@pipeline/assembly/step-contracts.js"
+import { renderInteractionsDoc } from "./doc-template.js"
+import { renderInteractionsPrompt } from "./prompt-template.js"
 import { interactionPatternsSchema } from "./schema.js"
 
 export const interactionsAspect = defineAspect({
@@ -13,15 +16,19 @@ export const interactionsAspect = defineAspect({
 		schema: interactionPatternsSchema,
 		schemaName: "InteractionPatterns",
 		schemaDescription: "Interaction patterns analysis",
-		contextConfig: {
-			filePriorities: ["component", "hook", "style", "page", "config"],
-			mustIncludePatterns: [/motion/, /animation/, /framer/],
-		},
+
 		promptConfig: INTERACTION_ANALYZER_CONFIG,
 	},
 
 	planning: {
-		docs: [{ filename: "07-interactions.md", title: "Interactions", category: "dynamic" }],
+		docs: [
+			{
+				filename: "07-interactions.md",
+				title: "Interactions",
+				category: "dynamic",
+				renderDoc: renderInteractionsDoc,
+			},
+		],
 		planSteps: (analysis: AnalysisResult): StepDeclaration[] => {
 			const ip = analysis.interactionPatterns
 			if (
@@ -38,6 +45,8 @@ export const interactionsAspect = defineAspect({
 						{ kind: "type", stepType: "design-tokens" },
 						{ kind: "type", stepType: "showcase-pages" },
 					],
+					contract: getStepContract("interactions"),
+					renderPrompt: renderInteractionsPrompt,
 				},
 			]
 		},

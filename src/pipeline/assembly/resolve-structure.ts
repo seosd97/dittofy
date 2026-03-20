@@ -1,5 +1,6 @@
 import type { StepType } from "@defs/prompts.js"
 import type { EnvironmentProfile } from "./resolve-environment.js"
+import { type StylingProfile, resolveStylingProfile } from "./styling-profiles.js"
 
 /**
  * Conventional project structure resolved from the environment.
@@ -67,25 +68,25 @@ interface StyleFiles {
 export function resolveProjectStructure(env: EnvironmentProfile): ProjectStructure {
 	const framework = env.framework.toLowerCase()
 	const styling = env.styling.toLowerCase()
+	const profile = resolveStylingProfile(styling)
 
 	const componentExt = resolveComponentExt(env)
 	const scriptExt = resolveScriptExt(env)
-	const stylingConfig = resolveStylingConfig(styling)
 
 	if (framework.includes("next")) {
-		return buildNextStructure(env, componentExt, scriptExt, styling, stylingConfig)
+		return buildNextStructure(env, componentExt, scriptExt, profile)
 	}
 	if (framework.includes("nuxt")) {
-		return buildNuxtStructure(componentExt, scriptExt, styling, stylingConfig)
+		return buildNuxtStructure(componentExt, scriptExt, profile)
 	}
 	if (framework.includes("vue")) {
-		return buildVueStructure(componentExt, scriptExt, styling, stylingConfig)
+		return buildVueStructure(componentExt, scriptExt, profile)
 	}
 	if (framework.includes("svelte")) {
-		return buildSvelteStructure(scriptExt, styling, stylingConfig)
+		return buildSvelteStructure(scriptExt, profile)
 	}
 
-	return buildReactSpaStructure(componentExt, scriptExt, styling, stylingConfig)
+	return buildReactSpaStructure(componentExt, scriptExt, profile)
 }
 
 function resolveComponentExt(env: EnvironmentProfile): string {
@@ -101,42 +102,26 @@ function resolveScriptExt(env: EnvironmentProfile): string {
 	return env.language.toLowerCase().includes("typescript") ? ".ts" : ".js"
 }
 
-function resolveStylingConfig(styling: string): string | null {
-	if (styling.includes("tailwind")) return "tailwind.config.ts"
-	return null
-}
-
-function resolveStyleFiles(stylesDir: string, styling: string): StyleFiles {
-	if (styling.includes("module")) {
-		return {
-			componentStylePattern: `Co-located .module.css files next to each component (e.g., Button.module.css)`,
-			animations: `${stylesDir}/animations.css`,
-		}
-	}
-	if (styling.includes("scss")) {
-		return {
-			componentStylePattern: `Co-located .module.scss files next to each component (e.g., Button.module.scss)`,
-			animations: `${stylesDir}/animations.scss`,
-		}
-	}
-	if (styling.includes("styled") || styling.includes("emotion")) {
-		return {
-			componentStylePattern: `Styles defined inline via styled() or css() within each component file`,
-			animations: `${stylesDir}/animations.ts`,
-		}
-	}
-	// Tailwind, plain CSS, or default
+function resolveStyleFiles(stylesDir: string, profile: StylingProfile): StyleFiles {
 	return {
-		componentStylePattern: `Utility classes applied directly in component markup`,
-		animations: `${stylesDir}/animations.css`,
+		componentStylePattern: profile.componentStylePattern,
+		animations: `${stylesDir}/animations${profile.styleExt}`,
 	}
 }
 
-function resolveUtilFiles(utilsDir: string, scriptExt: string, styling: string): UtilFiles {
+function resolveUtilFiles(utilsDir: string, scriptExt: string, profile: StylingProfile): UtilFiles {
 	return {
-		cn: styling.includes("tailwind") ? `${utilsDir}/cn${scriptExt}` : `${utilsDir}/classnames${scriptExt}`,
+		cn: profile.usesCn ? `${utilsDir}/cn${scriptExt}` : `${utilsDir}/classnames${scriptExt}`,
 		animations: `${utilsDir}/animations${scriptExt}`,
 	}
+}
+
+function resolveTokensFile(stylesDir: string, profile: StylingProfile): string {
+	return `${stylesDir}/tokens${profile.styleExt}`
+}
+
+function resolveGlobalsFile(stylesDir: string, profile: StylingProfile): string {
+	return `${stylesDir}/globals${profile.styleExt}`
 }
 
 // ── Framework-specific builders ──
@@ -145,8 +130,7 @@ function buildNextStructure(
 	env: EnvironmentProfile,
 	ext: string,
 	scriptExt: string,
-	styling: string,
-	stylingConfig: string | null,
+	profile: StylingProfile,
 ): ProjectStructure {
 	const isAppRouter = !env.framework.toLowerCase().includes("pages")
 	const stylesDir = "src/styles"
@@ -154,12 +138,12 @@ function buildNextStructure(
 
 	const common = {
 		stylesDir,
-		tokensFile: `${stylesDir}/tokens.css`,
-		globalsFile: `${stylesDir}/globals.css`,
+		tokensFile: resolveTokensFile(stylesDir, profile),
+		globalsFile: resolveGlobalsFile(stylesDir, profile),
 		layoutDir: "src/components/layout",
 		uiDir: "src/components/ui",
 		utilsDir,
-		stylingConfig,
+		stylingConfig: profile.configFile,
 		componentExt: ext,
 		scriptExt,
 		layoutFiles: {
@@ -168,8 +152,8 @@ function buildNextStructure(
 			navigation: `src/components/layout/Navigation${ext}`,
 			pageContainer: `src/components/layout/PageContainer${ext}`,
 		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, styling),
-		styleFiles: resolveStyleFiles(stylesDir, styling),
+		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
+		styleFiles: resolveStyleFiles(stylesDir, profile),
 	}
 
 	if (isAppRouter) {
@@ -198,21 +182,20 @@ function buildNextStructure(
 function buildNuxtStructure(
 	ext: string,
 	scriptExt: string,
-	styling: string,
-	stylingConfig: string | null,
+	profile: StylingProfile,
 ): ProjectStructure {
 	const stylesDir = "assets/css"
 	const utilsDir = "utils"
 	return {
 		stylesDir,
-		tokensFile: `${stylesDir}/tokens.css`,
-		globalsFile: `${stylesDir}/globals.css`,
+		tokensFile: resolveTokensFile(stylesDir, profile),
+		globalsFile: resolveGlobalsFile(stylesDir, profile),
 		layoutDir: "components/layout",
 		uiDir: "components/ui",
 		pagesDir: "pages",
 		utilsDir,
 		rootLayout: `layouts/default${ext}`,
-		stylingConfig,
+		stylingConfig: profile.configFile,
 		componentExt: ext,
 		scriptExt,
 		layoutFiles: {
@@ -225,29 +208,28 @@ function buildNuxtStructure(
 			home: `pages/index${ext}`,
 			about: `pages/about${ext}`,
 		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, styling),
-		styleFiles: resolveStyleFiles(stylesDir, styling),
+		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
+		styleFiles: resolveStyleFiles(stylesDir, profile),
 	}
 }
 
 function buildVueStructure(
 	ext: string,
 	scriptExt: string,
-	styling: string,
-	stylingConfig: string | null,
+	profile: StylingProfile,
 ): ProjectStructure {
 	const stylesDir = "src/assets/styles"
 	const utilsDir = "src/utils"
 	return {
 		stylesDir,
-		tokensFile: `${stylesDir}/tokens.css`,
-		globalsFile: `${stylesDir}/globals.css`,
+		tokensFile: resolveTokensFile(stylesDir, profile),
+		globalsFile: resolveGlobalsFile(stylesDir, profile),
 		layoutDir: "src/components/layout",
 		uiDir: "src/components/ui",
 		pagesDir: "src/views",
 		utilsDir,
 		rootLayout: `src/App${ext}`,
-		stylingConfig,
+		stylingConfig: profile.configFile,
 		componentExt: ext,
 		scriptExt,
 		layoutFiles: {
@@ -260,29 +242,25 @@ function buildVueStructure(
 			home: `src/views/Home${ext}`,
 			about: `src/views/About${ext}`,
 		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, styling),
-		styleFiles: resolveStyleFiles(stylesDir, styling),
+		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
+		styleFiles: resolveStyleFiles(stylesDir, profile),
 	}
 }
 
-function buildSvelteStructure(
-	scriptExt: string,
-	styling: string,
-	stylingConfig: string | null,
-): ProjectStructure {
+function buildSvelteStructure(scriptExt: string, profile: StylingProfile): ProjectStructure {
 	const ext = ".svelte"
 	const stylesDir = "src/styles"
 	const utilsDir = "src/lib/utils"
 	return {
 		stylesDir,
-		tokensFile: `${stylesDir}/tokens.css`,
-		globalsFile: `${stylesDir}/globals.css`,
+		tokensFile: resolveTokensFile(stylesDir, profile),
+		globalsFile: resolveGlobalsFile(stylesDir, profile),
 		layoutDir: "src/lib/components/layout",
 		uiDir: "src/lib/components/ui",
 		pagesDir: "src/routes",
 		utilsDir,
 		rootLayout: "src/routes/+layout.svelte",
-		stylingConfig,
+		stylingConfig: profile.configFile,
 		componentExt: ext,
 		scriptExt,
 		layoutFiles: {
@@ -295,29 +273,28 @@ function buildSvelteStructure(
 			home: "src/routes/+page.svelte",
 			about: "src/routes/about/+page.svelte",
 		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, styling),
-		styleFiles: resolveStyleFiles(stylesDir, styling),
+		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
+		styleFiles: resolveStyleFiles(stylesDir, profile),
 	}
 }
 
 function buildReactSpaStructure(
 	ext: string,
 	scriptExt: string,
-	styling: string,
-	stylingConfig: string | null,
+	profile: StylingProfile,
 ): ProjectStructure {
 	const stylesDir = "src/styles"
 	const utilsDir = "src/utils"
 	return {
 		stylesDir,
-		tokensFile: `${stylesDir}/tokens.css`,
-		globalsFile: `${stylesDir}/globals.css`,
+		tokensFile: resolveTokensFile(stylesDir, profile),
+		globalsFile: resolveGlobalsFile(stylesDir, profile),
 		layoutDir: "src/components/layout",
 		uiDir: "src/components/ui",
 		pagesDir: "src/pages",
 		utilsDir,
 		rootLayout: `src/App${ext}`,
-		stylingConfig,
+		stylingConfig: profile.configFile,
 		componentExt: ext,
 		scriptExt,
 		layoutFiles: {
@@ -330,8 +307,8 @@ function buildReactSpaStructure(
 			home: `src/pages/Home${ext}`,
 			about: `src/pages/About${ext}`,
 		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, styling),
-		styleFiles: resolveStyleFiles(stylesDir, styling),
+		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
+		styleFiles: resolveStyleFiles(stylesDir, profile),
 	}
 }
 
@@ -342,10 +319,7 @@ function buildReactSpaStructure(
  * Injected into the prompt text sent to the LLM so it generates
  * instructions with concrete, conventional file paths.
  */
-export function buildFileStructureGuide(
-	stepType: StepType,
-	structure: ProjectStructure,
-): string {
+export function buildFileStructureGuide(stepType: StepType, structure: ProjectStructure): string {
 	const lines: string[] = []
 	lines.push("## File Structure")
 	lines.push("")
@@ -359,12 +333,22 @@ export function buildFileStructureGuide(
 				lines.push(`${structure.stylingConfig}              # styling/token configuration`)
 			}
 			lines.push(`${structure.stylesDir}/`)
-			lines.push(`  ${basename(structure.tokensFile)}                    # design token definitions`)
-			lines.push(`  ${basename(structure.globalsFile)}                   # global base styles (reset, body defaults)`)
-			lines.push(`${structure.layoutDir}/                    # layout components (created in later steps)`)
-			lines.push(`${structure.uiDir}/                        # UI components (created in later steps)`)
+			lines.push(
+				`  ${basename(structure.tokensFile)}                    # design token definitions`,
+			)
+			lines.push(
+				`  ${basename(structure.globalsFile)}                   # global base styles (reset, body defaults)`,
+			)
+			lines.push(
+				`${structure.layoutDir}/                    # layout components (created in later steps)`,
+			)
+			lines.push(
+				`${structure.uiDir}/                        # UI components (created in later steps)`,
+			)
 			lines.push(`${structure.utilsDir}/`)
-			lines.push(`  ${basename(structure.utilFiles.cn)}                       # className merge utility`)
+			lines.push(
+				`  ${basename(structure.utilFiles.cn)}                       # className merge utility`,
+			)
 			lines.push("```")
 			break
 
@@ -379,7 +363,9 @@ export function buildFileStructureGuide(
 
 		case "typography":
 			lines.push("```")
-			lines.push(`${structure.tokensFile}                    # add typography tokens (extend existing)`)
+			lines.push(
+				`${structure.tokensFile}                    # add typography tokens (extend existing)`,
+			)
 			if (structure.stylingConfig) {
 				lines.push(`${structure.stylingConfig}              # extend theme with typography values`)
 			}
@@ -392,8 +378,12 @@ export function buildFileStructureGuide(
 			lines.push(`${structure.layoutDir}/`)
 			lines.push(`  ${basename(structure.layoutFiles.header)}                  # site header`)
 			lines.push(`  ${basename(structure.layoutFiles.footer)}                  # site footer`)
-			lines.push(`  ${basename(structure.layoutFiles.navigation)}              # navigation component`)
-			lines.push(`  ${basename(structure.layoutFiles.pageContainer)}           # page container (max-width, padding)`)
+			lines.push(
+				`  ${basename(structure.layoutFiles.navigation)}              # navigation component`,
+			)
+			lines.push(
+				`  ${basename(structure.layoutFiles.pageContainer)}           # page container (max-width, padding)`,
+			)
 			lines.push("```")
 			break
 
@@ -404,7 +394,9 @@ export function buildFileStructureGuide(
 			lines.push(`${structure.uiDir}/`)
 			lines.push(`  Button${structure.componentExt}                      # button component`)
 			lines.push(`  Card${structure.componentExt}                        # card component`)
-			lines.push(`  Section${structure.componentExt}                     # section container component`)
+			lines.push(
+				`  Section${structure.componentExt}                     # section container component`,
+			)
 			lines.push("```")
 			lines.push("")
 			lines.push(`**Component styling**: ${structure.styleFiles.componentStylePattern}`)
@@ -426,15 +418,23 @@ export function buildFileStructureGuide(
 			break
 
 		case "interactions":
-			lines.push("Modify existing files. Create utility files for shared animation logic if needed:")
+			lines.push(
+				"Modify existing files. Create utility files for shared animation logic if needed:",
+			)
 			lines.push("")
 			lines.push("```")
 			lines.push(`${structure.pageFiles.home}                # page transitions, scroll effects`)
 			lines.push(`${structure.pageFiles.about}               # page transitions`)
-			lines.push(`${structure.uiDir}/Button${structure.componentExt}             # hover/active/focus states`)
+			lines.push(
+				`${structure.uiDir}/Button${structure.componentExt}             # hover/active/focus states`,
+			)
 			lines.push(`${structure.uiDir}/Card${structure.componentExt}               # hover effects`)
-			lines.push(`${structure.styleFiles.animations}         # shared keyframes / animation definitions`)
-			lines.push(`${structure.utilFiles.animations}           # animation utility functions (optional)`)
+			lines.push(
+				`${structure.styleFiles.animations}         # shared keyframes / animation definitions`,
+			)
+			lines.push(
+				`${structure.utilFiles.animations}           # animation utility functions (optional)`,
+			)
 			lines.push("```")
 			break
 	}

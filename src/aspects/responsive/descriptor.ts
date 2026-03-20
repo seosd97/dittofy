@@ -1,7 +1,10 @@
 import { defineAspect } from "@aspects/define-aspect.js"
 import type { AnalysisResult } from "@defs/analysis.js"
 import type { StepDeclaration } from "@defs/descriptor.js"
-import { RESPONSIVE_ANALYZER_CONFIG } from "./prompts.js"
+import { RESPONSIVE_ANALYZER_CONFIG } from "@llm/prompts.js"
+import { getStepContract } from "@pipeline/assembly/step-contracts.js"
+import { renderResponsiveDoc } from "./doc-template.js"
+import { renderResponsivePrompt } from "./prompt-template.js"
 import { responsiveStrategySchema } from "./schema.js"
 
 export const responsiveAspect = defineAspect({
@@ -13,20 +16,22 @@ export const responsiveAspect = defineAspect({
 		schema: responsiveStrategySchema,
 		schemaName: "ResponsiveStrategy",
 		schemaDescription: "Responsive strategy analysis",
-		contextConfig: {
-			filePriorities: ["config", "style", "component", "layout", "page"],
-			mustIncludePatterns: [/tailwind\.config/, /breakpoint/],
-		},
+
 		promptConfig: RESPONSIVE_ANALYZER_CONFIG,
 	},
 
 	planning: {
 		docs: [
-			{ filename: "06-responsive-strategy.md", title: "Responsive Strategy", category: "dynamic" },
+			{
+				filename: "06-responsive-strategy.md",
+				title: "Responsive Strategy",
+				category: "dynamic",
+				renderDoc: renderResponsiveDoc,
+			},
 		],
 		planSteps: (analysis: AnalysisResult): StepDeclaration[] => {
 			const rs = analysis.responsiveStrategy
-			if (!rs?.approach.value || rs.patterns.length === 0) return []
+			if (!rs?.approach || rs.patterns.length === 0) return []
 			return [
 				{
 					stepType: "responsive",
@@ -36,6 +41,8 @@ export const responsiveAspect = defineAspect({
 						{ kind: "type", stepType: "design-tokens" },
 						{ kind: "type", stepType: "showcase-pages" },
 					],
+					contract: getStepContract("responsive"),
+					renderPrompt: renderResponsivePrompt,
 				},
 			]
 		},

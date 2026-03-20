@@ -22,9 +22,7 @@ export function formatTokenList(
 }
 
 /** Render consistency metrics section */
-export function renderConsistency(
-	consistency: ConsistencyMetrics | undefined,
-): string {
+export function renderConsistency(consistency: ConsistencyMetrics | undefined): string {
 	if (!consistency) return ""
 	const lines: string[] = []
 	lines.push("## Consistency Assessment\n")
