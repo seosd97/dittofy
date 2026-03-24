@@ -295,7 +295,14 @@ ${schemaText}`
 	// Output.json() returns untyped JSON — validate with Zod
 	let validationError: string | undefined
 	if (response.output != null) {
-		const validated = params.schema.safeParse(response.output)
+		// First try: parse as-is
+		const firstTry = params.schema.safeParse(response.output)
+		if (firstTry.success) {
+			return { object: firstTry.data, usage: response.usage }
+		}
+		// Second try: normalize null→[] for GLM models that return null for empty arrays
+		const normalized = normalizeNullArrays(response.output)
+		const validated = params.schema.safeParse(normalized)
 		if (validated.success) {
 			return { object: validated.data, usage: response.usage }
 		}
@@ -319,6 +326,24 @@ ${schemaText}`
 }
 
 // ── Helpers ─────────────────────────────────────────────────
+
+/**
+ * Recursively convert null values to [] where the surrounding context
+ * suggests an array was expected (sibling keys have array values).
+ * Handles GLM models returning null for empty arrays.
+ */
+function normalizeNullArrays(obj: unknown): unknown {
+	if (obj === null || obj === undefined) return obj
+	if (Array.isArray(obj)) return obj.map(normalizeNullArrays)
+	if (typeof obj === "object") {
+		const result: Record<string, unknown> = {}
+		for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+			result[key] = value === null ? [] : normalizeNullArrays(value)
+		}
+		return result
+	}
+	return obj
+}
 
 function appendValidationFeedback(originalPrompt: string, error: SchemaValidationError): string {
 	const truncated =
