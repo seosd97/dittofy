@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { join, resolve } from "node:path"
+import { join } from "node:path"
+import { getWorkspacesDir } from "@infra/fs.js"
 import { isDebugMode, logger } from "@infra/logger.js"
 
 export interface Workspace {
@@ -12,8 +14,9 @@ export interface Workspace {
 	cleanup(): Promise<void>
 }
 
-export async function createWorkspace(outputDir: string): Promise<Workspace> {
-	const tmpDir = resolve(outputDir, ".tmp")
+export async function createWorkspace(projectName: string): Promise<Workspace> {
+	const hash = createHash("md5").update(`${projectName}-${Date.now()}`).digest("hex").slice(0, 8)
+	const tmpDir = join(getWorkspacesDir(), `${projectName}-${hash}`)
 	await mkdir(tmpDir, { recursive: true })
 
 	return {

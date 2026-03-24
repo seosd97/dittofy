@@ -180,7 +180,7 @@ export async function runAnalysisPipeline(
 	let workspace: Awaited<ReturnType<typeof createWorkspace>> | null = null
 
 	try {
-		workspace = await createWorkspace(ctx.outputDir)
+		workspace = await createWorkspace(ctx.projectName)
 
 		// Detect monorepo
 		const monorepoRoot = await findMonorepoRoot(resolved.localPath)

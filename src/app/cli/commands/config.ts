@@ -1,6 +1,24 @@
+import { readFile, writeFile } from "node:fs/promises"
 import { loadDittoConfig } from "@infra/config/loader.js"
+import { ensureDittoHome, getSettingsPath } from "@infra/fs.js"
 import { logger } from "@infra/logger.js"
 import { defineCommand } from "citty"
+
+const ALLOWED_KEYS = ["output", "language", "model", "provider"] as const
+
+async function readSettings(): Promise<Record<string, unknown>> {
+	try {
+		const content = await readFile(getSettingsPath(), "utf-8")
+		return JSON.parse(content) as Record<string, unknown>
+	} catch {
+		return {}
+	}
+}
+
+async function writeSettings(settings: Record<string, unknown>): Promise<void> {
+	await ensureDittoHome()
+	await writeFile(getSettingsPath(), JSON.stringify(settings, null, "\t"), "utf-8")
+}
 
 export const configCommand = defineCommand({
 	meta: {
@@ -25,6 +43,7 @@ export const configCommand = defineCommand({
 					docsOnly: config.docsOnly,
 					promptsOnly: config.promptsOnly,
 				}
+				logger.log(`Config file: ${getSettingsPath()}\n`)
 				logger.log("Current configuration:\n")
 				for (const [key, value] of Object.entries(display)) {
 					if (typeof value === "object") {
@@ -40,34 +59,36 @@ export const configCommand = defineCommand({
 			},
 		}),
 		set: defineCommand({
-			meta: { name: "set", description: "Show how to configure a setting" },
+			meta: { name: "set", description: "Set a configuration value" },
 			args: {
 				key: {
 					type: "positional",
-					description: "Configuration key (e.g., provider, model, language)",
+					description: `Configuration key (${ALLOWED_KEYS.join(", ")})`,
 					required: true,
 				},
 				value: { type: "positional", description: "Configuration value", required: true },
 			},
 			async run({ args }) {
-				const allowedKeys = ["output", "language", "model", "provider"]
-				if (!allowedKeys.includes(args.key)) {
-					logger.error(`Unknown config key: "${args.key}". Allowed keys: ${allowedKeys.join(", ")}`)
+				if (!ALLOWED_KEYS.includes(args.key as (typeof ALLOWED_KEYS)[number])) {
+					logger.error(
+						`Unknown config key: "${args.key}". Allowed keys: ${ALLOWED_KEYS.join(", ")}`,
+					)
 					logger.info("For API keys, use environment variables or .env file:")
 					logger.info("  OPENAI_API_KEY, ANTHROPIC_API_KEY, ZAI_API_KEY")
 					process.exitCode = 1
 					return
 				}
 
-				// c12 stores config in ditto.config.ts/json etc. For now, guide the user.
-				logger.info(`To set "${args.key}" to "${args.value}", create or edit ditto.config.ts:`)
-				logger.log("")
-				logger.log("  // ditto.config.ts")
-				logger.log(`  export default { ${args.key}: "${args.value}" }`)
-				logger.log("")
-				logger.info("Or pass it as a CLI flag:")
-				logger.log(`  ditto analyze <source> --${args.key} ${args.value}`)
-				logger.log("")
+				const settings = await readSettings()
+				settings[args.key] = args.value
+				await writeSettings(settings)
+				logger.info(`Set ${args.key} = "${args.value}" in ${getSettingsPath()}`)
+			},
+		}),
+		path: defineCommand({
+			meta: { name: "path", description: "Show Ditto config directory path" },
+			run() {
+				logger.log(getSettingsPath())
 			},
 		}),
 	},
