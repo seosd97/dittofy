@@ -15,15 +15,10 @@
 		"outDir": "dist",
 		"rootDir": "src",
 		"paths": {
-			"@aspects/*": ["./src/aspects/*"],
-			"@llm/*": ["./src/llm/*"],
-			"@source/*": ["./src/source/*"],
-			"@output/*": ["./src/output/*"],
-			"@pipeline/*": ["./src/pipeline/*"],
-			"@cli/*": ["./src/cli/*"],
-			"@config/*": ["./src/config/*"],
-			"@defs/*": ["./src/types/*"],
-			"@utils/*": ["./src/utils/*"]
+			"@infra/*": ["./src/infra/*"],
+			"@domain/*": ["./src/domain/*"],
+			"@app/*": ["./src/app/*"],
+			"@defs/*": ["./src/domain/types/*"]
 		}
 	},
 	"include": ["src/**/*.ts"],
