@@ -15,7 +15,11 @@ Ditto extracts **design essence for mass production**, NOT 1:1 source replicatio
 
 ```bash
 ditto analyze <source>                                      # 분석 + 생성 한번에
+ditto analyze <source> --analyze-only                       # 분석만 (analysis.json 생성)
+ditto analyze <source> --dry-run                            # 추출만 (LLM 호출 없이 구조 확인)
+ditto analyze <source> --include packages/ui,packages/tokens # 추가 경로 포함
 ditto generate --from analysis.json --target next-tailwind  # 기존 분석으로 다른 환경 생성
+ditto generate --from analysis.json --dry-run               # 생성 미리보기 (파일 쓰기 없음)
 ```
 
 ## Pipeline Architecture
@@ -33,11 +37,11 @@ Phase 1: Lightweight Scan (LLM 0회)
 Phase 2 - Pass 1: LLM Planning (LLM 1회)
   file-tree.md + project-meta.md → structured JSON (Zod schema)
   → AnalysisPlan: aspects, waves, fileSelection
-  → 검증 실패 시 autoSelectFiles fallback (planning 실패 시 error)
+  → <50% 매칭 시 FileSelectionError (fast-fail, 정적 fallback 없음)
 
 Phase 2 - Pass 1.5: Lazy File Loading (LLM 0회)
   planner가 선택한 파일만 디스크에서 읽기 → CodeChunk[]
-  validateFileSelection → <50% match시 autoSelectFiles
+  resolveFiles → <50% match시 FileSelectionError (fast-fail)
 
 Phase 2 - Pass 2: Wave Execution (LLM N회)
   Wave 1: designTokens
@@ -50,7 +54,7 @@ Phase 2 - Pass 3: Synthesis (LLM 1회)
   viability 평가 → reconciliation → essence 합성
   → analysis.json + analysis.md
 
-Cleanup: .tmp/ 삭제
+Cleanup: .tmp/ 삭제 (--debug 시 보존)
 
 ━━━ runGeneratePipeline ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -63,7 +67,7 @@ Phase 4: 구현 프롬프트 생성 (LLM 0회, 템플릿)
 - **No pre-reading**: Phase 1은 파일 시스템 스캔만 — 파일 내용 읽기 없음
 - **LLM-driven file selection**: LLM이 file-tree.md + project-meta.md를 보고 structured JSON으로 aspect별 핵심 파일 선정
 - **Lazy file loading**: planner가 선택한 파일만 디스크에서 읽기 (200개 사전 로딩 없음)
-- **File selection validation**: LLM 선택 파일의 50% 이상이 실제 존재해야 함, 아니면 autoSelectFiles fallback
+- **File selection validation**: LLM 선택 파일의 50% 이상이 실제 존재해야 함, 아니면 FileSelectionError (fast-fail)
 - **Wave-based execution**: designTokens → typography+layout → 나머지 순서로 실행, 선행 결과를 후행에 제공
 - **Monorepo support**: findMonorepoRoot로 자동 감지, 2-level file tree 생성
 - **tmp workspace**: 중간 산출물을 .tmp/에 저장하여 디버깅/재시도 지원
@@ -111,23 +115,30 @@ Steps form a dependency DAG: `setup → design-tokens → typography → layout-
 
 ## Path Aliases
 
-| Alias | Directory |
-|-------|-----------|
-| `@aspects/*` | `src/aspects/*` |
-| `@llm/*` | `src/llm/*` |
-| `@source/*` | `src/source/*` |
-| `@output/*` | `src/output/*` |
-| `@pipeline/*` | `src/pipeline/*` |
-| `@cli/*` | `src/cli/*` |
-| `@config/*` | `src/config/*` |
-| `@defs/*` | `src/types/*` |
-| `@utils/*` | `src/utils/*` |
+| Alias | Directory | Layer |
+|-------|-----------|-------|
+| `@infra/*` | `src/infra/*` | Layer 0 (I/O) |
+| `@domain/*` | `src/domain/*` | Layer 1 (비즈니스 로직) |
+| `@app/*` | `src/app/*` | Layer 2 (오케스트레이션) |
+| `@defs/*` | `src/domain/types/*` | Layer 1 (타입) |
+
+의존 방향: `infra ← domain ← app` (단방향 강제)
 
 > `@defs` (not `@types`) is used to avoid conflicts with DefinitelyTyped's `@types` scope.
 
-## Architecture — Vertical Slice (Aspect-based)
+## Architecture — 3-Layer + Vertical Slice
 
-Each design aspect is a self-contained vertical slice under `src/aspects/<name>/`:
+### Layer Structure
+
+의존 방향: `infra ← domain ← app` (단방향)
+
+- **`src/infra/`** (Layer 0): 외부 서비스, I/O — LLM client, file scanner, config loader, output writers
+- **`src/domain/`** (Layer 1): 순수 비즈니스 로직 — types, constants, aspects, rendering, analysis, llm-prompts
+- **`src/app/`** (Layer 2): 오케스트레이션 — pipeline, CLI, runner
+
+### Vertical Slice (Aspects)
+
+Each design aspect is a self-contained vertical slice under `src/domain/aspects/<name>/`:
 
 - `schema.ts` — Zod schemas for analysis output
 - `descriptor.ts` — `AspectDescriptor<K>` with analyzer config, doc/prompt templates, planning
@@ -137,56 +148,36 @@ Each design aspect is a self-contained vertical slice under `src/aspects/<name>/
 
 ### Key Types
 
-- **`AspectTypeMap`** (`src/types/aspect-map.ts`): Maps aspect names to analysis types
-- **`AspectDescriptor<K>`** (`src/types/descriptor.ts`): Generic descriptor with `analyzer` and `planning` sections
-- **`ASPECT_REGISTRY`** (`src/aspects/registry.ts`): Typed registry keyed by `AspectName`
-- **`ILLMClient`** (`src/llm/client.ts`): Interface for DI-friendly LLM access
-- **`PipelineContext`** (`src/types/pipeline.ts`): DI container with `llmClient`, `usage`
+- **`AspectTypeMap`** (`@defs/aspect-map.ts`): Maps aspect names to analysis types
+- **`AspectDescriptor<K>`** (`@defs/descriptor.ts`): Generic descriptor with `analyzer` and `planning` sections
+- **`ASPECT_REGISTRY`** (`@domain/aspects/registry.ts`): Typed registry keyed by `AspectName`
+- **`ILLMClient`** (`@infra/llm/client.ts`): Interface for DI-friendly LLM access
+- **`PipelineContext`** (`@defs/pipeline.ts`): DI container with `llmClient`, `usage`
 
 ## Source Layout
 
 ```
 src/
-├── aspects/            # 7 vertical slices (tokens, typography, components, ...)
-│   ├── define-aspect.ts
-│   ├── registry.ts
-│   └── <name>/         # descriptor.ts, schema.ts, doc-template.ts, prompt-template.ts
-├── cli/                # CLI commands (analyze, generate)
-├── config/             # Constants (extraction, token-estimation, target-presets)
-├── llm/                # LLM client, retry, runner, prompts, presets, usage
-├── output/             # File writers (docs.ts, prompts.ts)
-├── pipeline/
-│   ├── orchestrator.ts    # Main pipeline (analyze + generate)
-│   ├── workspace.ts       # .tmp/ workspace management
-│   ├── planner.ts         # LLM-driven analysis planning (structured JSON output)
-│   ├── plan-parser.ts     # Zod schema for AnalysisPlan + validation
-│   ├── file-loader.ts     # Lazy file loading, validateFileSelection, autoSelectFiles
-│   ├── wave-executor.ts   # Wave-based aspect execution + cross-aspect context
-│   ├── context.ts         # Context builder (file list based)
-│   ├── viability.ts       # Post-analysis viability check
-│   ├── reconciliation.ts  # Cross-aspect conflict resolution
-│   ├── essence.ts         # Design essence synthesis
-│   ├── assembly/
-│   │   ├── tree-renderer.ts     # File tree / monorepo tree / project meta rendering
-│   │   ├── analysis-renderer.ts # analysis.md rendering
-│   │   ├── doc-assembler.ts     # Phase 3: design-spec documents
-│   │   ├── prompt-assembler.ts  # Phase 4: implementation prompts
-│   │   ├── setup-prompt.ts      # Setup step prompt template
-│   │   ├── styling-profiles.ts  # Target-specific styling profiles
-│   │   ├── resolve-environment.ts
-│   │   ├── resolve-structure.ts
-│   │   ├── step-contracts.ts
-│   │   ├── format-utils.ts
-│   │   └── readme-gen.ts
-│   └── planners/          # Step planning (2-pass dependency resolution)
-├── source/
-│   ├── file-scanner.ts         # File system scanning (tree only, no content reading)
-│   ├── workspace-detector.ts   # Monorepo detection (findMonorepoRoot)
-│   ├── tech-stack-detector.ts  # Tech stack detection from ProjectMeta
-│   ├── repo-resolver.ts        # Source resolution (local path / GitHub URL)
-│   └── index.ts                # runExtraction entry point
-├── types/              # Type definitions (@defs/*)
-└── utils/              # fs, logger, path utilities
+├── index.ts
+├── infra/                          # Layer 0: I/O
+│   ├── fs.ts, logger.ts
+│   ├── llm/                        # client, errors, presets, retry, usage
+│   ├── source/                     # file-scanner, repo-resolver, workspace-detector, tech-stack-detector
+│   ├── output/                     # docs.ts, prompts.ts
+│   └── config/                     # loader, schema, defaults, provider-env
+├── domain/                         # Layer 1: 비즈니스 로직
+│   ├── types/                      # 모든 타입 (@defs/*)
+│   ├── constants/                  # analysis, extraction, token-estimation, target-presets
+│   ├── aspects/                    # 7 vertical slices
+│   ├── rendering/                  # format-utils, tree-renderer, resolve-environment, step-contracts 등
+│   ├── analysis/                   # context-builder, plan-parser, viability, reconciliation, file-resolver
+│   ├── llm-prompts/               # shared-principles, prompt-builder, analyzer-configs
+│   └── path-utils.ts
+└── app/                            # Layer 2: 오케스트레이션
+    ├── runner.ts                   # LLM analyzer runner
+    ├── pipeline/                   # orchestrator, planner, wave-executor, workspace 등
+    │   └── planners/
+    └── cli/                        # commands (analyze, generate, config)
 ```
 
 ## Common Commands
