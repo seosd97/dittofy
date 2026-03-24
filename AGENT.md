@@ -34,10 +34,12 @@ Phase 1: Lightweight Scan (LLM 0회)
   모노레포 감지 (findMonorepoRoot → 2-level tree)
   → .tmp/file-tree.md + .tmp/project-meta.md
 
+Early Validation (LLM 0회)
+  API key, model/provider 호환성 검증 → 실패 시 즉시 UserError
+
 Phase 2 - Pass 1: LLM Planning (LLM 1회)
   file-tree.md + project-meta.md → structured JSON (Zod schema)
   → AnalysisPlan: aspects, waves, fileSelection
-  → <50% 매칭 시 FileSelectionError (fast-fail, 정적 fallback 없음)
 
 Phase 2 - Pass 1.5: Lazy File Loading (LLM 0회)
   planner가 선택한 파일만 디스크에서 읽기 → CodeChunk[]

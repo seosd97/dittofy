@@ -18,14 +18,24 @@ Ditto는 프론트엔드 프로젝트의 소스 코드를 분석하여 디자인
 # 설치
 npm install -g ditto
 
-# API 키 설정
-export OPENAI_API_KEY=sk-...
+# API 키 설정 (.env 파일 또는 환경변수)
+echo "OPENAI_API_KEY=sk-..." > .env
+# 또는: export OPENAI_API_KEY=sk-...
 
-# 로컬 프로젝트 분석
+# 로컬 프로젝트 분석 + 생성 (한번에)
 ditto analyze ./my-react-app
 
 # GitHub 레포지토리 분석
 ditto analyze https://github.com/user/repo
+
+# 모노레포: 특정 앱 지정
+ditto analyze ./my-monorepo/apps/web
+
+# 분석만 (analysis.json 생성, 문서/프롬프트 나중에)
+ditto analyze ./my-react-app --analyze-only
+
+# 기존 분석으로 다른 환경용 생성 (무료, LLM 호출 없음)
+ditto generate --from ditto-output/analysis.json --target next-tailwind
 ```
 
 ## 산출물
@@ -35,8 +45,8 @@ ditto analyze https://github.com/user/repo
 ```
 ditto-output/
 ├── analysis.json              # 구조화된 분석 결과 (7개 aspect + essence)
+├── analysis.md                # 사람이 읽을 수 있는 분석 요약
 ├── design-spec/               # 디자인 스펙 문서
-│   ├── 00-overview.md         #   프로젝트 정체성 & 디자인 철학
 │   ├── 01-design-tokens.md    #   색상, 간격, 반경, 그림자, 브레이크포인트
 │   ├── 02-typography.md       #   폰트, 타입 스케일, 굵기
 │   ├── 03-component-catalog.md #  컴포넌트 패턴 레퍼런스
@@ -46,12 +56,12 @@ ditto-output/
 │   └── 07-interactions.md     #   애니메이션, 트랜지션 (동적)
 └── prompts/                   # AI Agent 구현 프롬프트
     ├── README.md              #   사용 가이드 (여기서 시작!)
-    ├── step-01-project-setup.md
+    ├── step-01-setup.md
     ├── step-02-design-tokens.md
     ├── step-03-typography.md
     ├── step-04-layout-shell.md
     ├── step-05-showcase-pages.md
-    ├── step-06-responsive-design.md
+    ├── step-06-responsive.md
     └── step-07-interactions.md
 ```
 
@@ -72,7 +82,7 @@ ditto-output/
 ```
 이 프로젝트에 디자인 시스템을 구현하려고 해. 아래 프롬프트를 읽고 실행해줘.
 
-(step-01-project-setup.md 내용 붙여넣기)
+(step-01-setup.md 내용 붙여넣기)
 ```
 
 **2. 에이전트가 완료하면 결과 확인 후 다음 스텝 전달:**
@@ -119,17 +129,22 @@ Ditto는 소스 레포의 기술 스택을 감지하여 두 가지 모드로 프
 
 ## 파이프라인
 
+Ditto는 **2-command 분리** 설계:
+- `ditto analyze` — LLM 비용 발생 (분석)
+- `ditto generate` — 무료, 반복 가능 (생성)
+
 ```
-Health Check → Phase 1: Extraction → Phase 2: Analysis → Phase 3: Docs → Phase 4: Prompts
+ditto analyze:  Validation → Phase 1: Scan → Phase 2: LLM Analysis → analysis.json
+ditto generate: analysis.json → Phase 3: Docs → Phase 4: Prompts
 ```
 
-| Phase | 설명 |
-|-------|------|
-| **Health Check** | 레포 유효성 검증 (파일 수, 설정 존재 여부) |
-| **Phase 1: Extraction** | 파일 스캔, 코드 청크 추출, 설정 파일 추출, 기술 스택 감지 |
-| **Phase 2: Analysis** | 7개 디자인 측면 분석 (병렬, 동시 3개) + 디자인 에센스 합성 |
-| **Phase 3: Documentation** | 분석 결과를 마크다운 문서로 생성 |
-| **Phase 4: Prompt Generation** | 환경 프로파일 → 스텝 계획 → 스텝별 프롬프트 생성 |
+| Phase | 설명 | LLM |
+|-------|------|-----|
+| **Validation** | API 키, 모델/프로바이더 호환성 검증 | ✗ |
+| **Phase 1: Scan** | 파일 트리 스캔, 기술 스택 감지, 모노레포 감지 | ✗ |
+| **Phase 2: Analysis** | LLM이 분석 계획 수립 → Wave별 병렬 분석 → 에센스 합성 | ✓ |
+| **Phase 3: Docs** | 분석 결과를 마크다운 디자인 스펙으로 생성 | ✗ |
+| **Phase 4: Prompts** | 환경 프로파일 → 스텝 계획 → 스텝별 프롬프트 생성 | ✗ |
 
 ### 7개 분석 측면 (Aspects)
 
@@ -145,9 +160,7 @@ Health Check → Phase 1: Extraction → Phase 2: Analysis → Phase 3: Docs →
 
 ## CLI 옵션
 
-```bash
-ditto analyze <source> [options]
-```
+### `ditto analyze <source> [options]`
 
 | 옵션 | 설명 | 기본값 |
 |------|------|--------|
@@ -156,9 +169,24 @@ ditto analyze <source> [options]
 | `--model, -m` | LLM 모델 | `gpt-5.2` |
 | `--provider, -p` | LLM provider (`openai`, `anthropic`, `zai`) | `openai` |
 | `--language, -l` | 출력 언어 (`ko`, `en`) | `ko` |
+| `--analyze-only` | 분석만 수행 (analysis.json 생성, 문서/프롬프트 스킵) | `false` |
+| `--dry-run` | 추출만 수행 (LLM 호출 없이 구조 확인, API 키 불필요) | `false` |
+| `--include` | 추가 포함 경로 (쉼표 구분, 모노레포용) | — |
 | `--docs-only` | 디자인 스펙만 생성 (프롬프트 스킵) | `false` |
 | `--prompts-only` | 프롬프트만 재생성 (문서 스킵) | `false` |
-| `--debug, -d` | 디버그 로깅 | `false` |
+| `--debug, -d` | 디버그 로깅 (LLM I/O, .tmp/ 보존) | `false` |
+
+### `ditto generate --from <path> [options]`
+
+| 옵션 | 설명 | 기본값 |
+|------|------|--------|
+| `--from` | analysis.json 경로 | (필수) |
+| `--output, -o` | 출력 디렉토리 | `./ditto-output` |
+| `--target, -t` | 타겟 환경 프리셋 (`auto`, `next-tailwind`, 등) | `auto` |
+| `--language, -l` | 출력 언어 (`ko`, `en`) | `en` |
+| `--dry-run` | 생성 미리보기 (파일 쓰기 없음) | `false` |
+| `--docs-only` | 디자인 스펙만 생성 | `false` |
+| `--prompts-only` | 프롬프트만 생성 | `false` |
 
 ## 설정
 
@@ -173,14 +201,32 @@ export default {
 }
 ```
 
-API 키는 환경변수로 설정:
+API 키는 `.env` 파일 또는 환경변수로 설정:
 
 ```bash
-# 사용하는 provider에 맞춰 설정
+# .env 파일 (프로젝트 루트)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+ZAI_API_KEY=...
+
+# 또는 환경변수로 직접 설정
 export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
-export ZAI_API_KEY=...
 ```
+
+## 모노레포 지원
+
+Ditto는 pnpm workspaces 기반 모노레포를 자동 감지합니다.
+
+```bash
+# 특정 앱 지정 (모노레포 루트를 자동 감지)
+ditto analyze ./my-monorepo/apps/web
+
+# 추가 패키지 포함 (공유 UI 라이브러리 등)
+ditto analyze ./my-monorepo/apps/web --include packages/ui,packages/tokens
+```
+
+- 자동으로 워크스페이스 의존성을 감지하여 관련 패키지의 파일 트리를 포함
+- 모노레포 루트를 가리키면 FE 앱 목록을 안내
 
 ## 요구 사항
 
