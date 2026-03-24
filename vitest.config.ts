@@ -1,6 +1,8 @@
 import { resolve } from "node:path"
 import { defineConfig } from "vitest/config"
 
+const root = import.meta.dirname
+
 export default defineConfig({
 	test: {
 		include: ["src/**/__tests__/**/*.test.ts"],
@@ -16,10 +18,10 @@ export default defineConfig({
 	},
 	resolve: {
 		alias: {
-			"@infra": resolve(__dirname, "src/infra"),
-			"@domain": resolve(__dirname, "src/domain"),
-			"@app": resolve(__dirname, "src/app"),
-			"@defs": resolve(__dirname, "src/domain/types"),
+			"@infra": resolve(root, "src/infra"),
+			"@domain": resolve(root, "src/domain"),
+			"@app": resolve(root, "src/app"),
+			"@defs": resolve(root, "src/domain/types"),
 		},
 	},
 })

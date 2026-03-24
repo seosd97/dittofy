@@ -21,6 +21,6 @@
 		}
 	},
 	"files": {
-		"ignore": ["node_modules", "dist", "ditto-output", "tests/fixtures"]
+		"ignore": ["node_modules", "dist", "coverage", "ditto-output", "tests/fixtures"]
 	}
 }
