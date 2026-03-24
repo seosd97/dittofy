@@ -95,7 +95,7 @@ export const analyzeCommand = defineCommand({
 			logger.info(`Include paths: ${includePaths.join(", ")}`)
 		}
 
-		logger.info(`Ditto v0.1.0 — Analyzing: ${source}`)
+		logger.info(`Dittofy v0.1.0 — Analyzing: ${source}`)
 
 		// Dry-run: extraction only, no config/API key needed
 		if (args["dry-run"]) {

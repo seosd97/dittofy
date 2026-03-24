@@ -16,7 +16,7 @@ Ditto는 프론트엔드 프로젝트의 소스 코드를 분석하여 디자인
 
 ```bash
 # 설치
-npm install -g ditto
+npm install -g dittofy
 
 # API 키 설정 (.env 파일 또는 환경변수)
 echo "OPENAI_API_KEY=sk-..." > .env

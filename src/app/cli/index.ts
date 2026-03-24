@@ -6,7 +6,7 @@ import { generateCommand } from "./commands/generate.js"
 
 const main = defineCommand({
 	meta: {
-		name: "ditto",
+		name: "dittofy",
 		version: "0.1.0",
 		description:
 			"Analyze FE repositories to extract design essence and generate AI coding agent prompts",
