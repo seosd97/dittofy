@@ -47,3 +47,4 @@ REVIEW-BRIEF.md
 # Lock (keep pnpm-lock)
 package-lock.json
 yarn.lock
+test-output/

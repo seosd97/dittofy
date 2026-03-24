@@ -84,15 +84,6 @@ export const analyzeCommand = defineCommand({
 			throw new UserError("Source path or GitHub URL is required")
 		}
 
-		const config = await loadDittoConfig({
-			output: args.output,
-			model: args.model,
-			provider: args.provider,
-			language: args.language,
-			docsOnly: args["docs-only"],
-			promptsOnly: args["prompts-only"],
-		})
-
 		const includePaths = args.include
 			? args.include
 					.split(",")
@@ -106,10 +97,20 @@ export const analyzeCommand = defineCommand({
 
 		logger.info(`Ditto v0.1.0 — Analyzing: ${source}`)
 
+		// Dry-run: extraction only, no config/API key needed
 		if (args["dry-run"]) {
 			await runAnalyzeDryRun(source, includePaths)
 			return
 		}
+
+		const config = await loadDittoConfig({
+			output: args.output,
+			model: args.model,
+			provider: args.provider,
+			language: args.language,
+			docsOnly: args["docs-only"],
+			promptsOnly: args["prompts-only"],
+		})
 
 		if (args["analyze-only"]) {
 			const result = await runAnalysisPipeline(
