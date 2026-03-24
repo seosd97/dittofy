@@ -166,7 +166,7 @@ ditto generate: analysis.json → Phase 3: Docs → Phase 4: Prompts
 |------|------|--------|
 | `<source>` | 로컬 경로 또는 GitHub URL | (필수) |
 | `--output, -o` | 출력 디렉토리 | `ditto-output` |
-| `--model, -m` | LLM 모델 | `gpt-5.2` |
+| `--model, -m` | LLM 모델 | `gpt-5.4-mini` |
 | `--provider, -p` | LLM provider (`openai`, `anthropic`, `zai`) | `openai` |
 | `--language, -l` | 출력 언어 (`ko`, `en`) | `ko` |
 | `--analyze-only` | 분석만 수행 (analysis.json 생성, 문서/프롬프트 스킵) | `false` |

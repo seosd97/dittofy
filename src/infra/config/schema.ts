@@ -5,7 +5,7 @@ export const configSchema = z
 	.object({
 		output: z.string().min(1).default("ditto-output"),
 		language: z.enum(["ko", "en"]).default("ko"),
-		model: z.string().default("gpt-5.2"),
+		model: z.string().default("gpt-5.4-mini"),
 		provider: z.enum(["openai", "anthropic", "zai"]).default("openai"),
 		apiKeys: z
 			.object({

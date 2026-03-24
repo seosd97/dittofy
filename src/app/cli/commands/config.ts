@@ -40,7 +40,7 @@ export const configCommand = defineCommand({
 			},
 		}),
 		set: defineCommand({
-			meta: { name: "set", description: "Set a configuration value" },
+			meta: { name: "set", description: "Show how to configure a setting" },
 			args: {
 				key: {
 					type: "positional",

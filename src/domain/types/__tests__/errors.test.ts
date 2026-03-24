@@ -16,10 +16,10 @@ describe("Error classes", () => {
 	})
 
 	it("LLMError has code 3 with provider info", () => {
-		const err = new LLMError("test", { provider: "openai", model: "gpt-5.2" })
+		const err = new LLMError("test", { provider: "openai", model: "gpt-5.4-mini" })
 		expect(err.code).toBe(3)
 		expect(err.name).toBe("LLMError")
 		expect(err.provider).toBe("openai")
-		expect(err.model).toBe("gpt-5.2")
+		expect(err.model).toBe("gpt-5.4-mini")
 	})
 })

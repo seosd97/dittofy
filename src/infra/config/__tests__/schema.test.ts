@@ -6,7 +6,7 @@ describe("configSchema", () => {
 		const result = configSchema.safeParse({
 			output: "my-output",
 			language: "en",
-			model: "gpt-5.2",
+			model: "gpt-5.4-mini",
 			provider: "openai",
 			apiKeys: { openai: "sk-test123" },
 			docsOnly: false,
@@ -23,7 +23,7 @@ describe("configSchema", () => {
 		if (result.success) {
 			expect(result.data.output).toBe("ditto-output")
 			expect(result.data.language).toBe("ko")
-			expect(result.data.model).toBe("gpt-5.2")
+			expect(result.data.model).toBe("gpt-5.4-mini")
 			expect(result.data.provider).toBe("openai")
 			expect(result.data.docsOnly).toBe(false)
 			expect(result.data.promptsOnly).toBe(false)

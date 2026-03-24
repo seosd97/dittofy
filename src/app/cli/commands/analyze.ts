@@ -34,7 +34,7 @@ export const analyzeCommand = defineCommand({
 		model: {
 			type: "string",
 			alias: "m",
-			description: "LLM model to use (default: gpt-5.2)",
+			description: "LLM model to use (default: gpt-5.4-mini)",
 		},
 		provider: {
 			type: "string",
