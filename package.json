@@ -11,7 +11,7 @@
 	},
 	"files": ["dist"],
 	"scripts": {
-		"dev": "tsx src/cli/index.ts",
+		"dev": "tsx src/app/cli/index.ts",
 		"build": "tsdown",
 		"test": "vitest",
 		"test:run": "vitest run",
