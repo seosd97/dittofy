@@ -1,5 +1,10 @@
 # Ditto
 
+[![CI](https://github.com/seosd97/dittofy/actions/workflows/ci.yml/badge.svg)](https://github.com/seosd97/dittofy/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/seosd97/dittofy/graph/badge.svg)](https://codecov.io/gh/seosd97/dittofy)
+[![npm version](https://img.shields.io/npm/v/dittofy)](https://www.npmjs.com/package/dittofy)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 FE 레포지토리를 분석하여 디자인 에센스를 추출하고, AI 코딩 에이전트용 구현 프롬프트를 생성하는 CLI 도구.
 
 > "레퍼런스 사이트 보고 이런 느낌으로 만들어줘" → 디자인 스펙 + 단계별 구현 프롬프트
