@@ -1,6 +1,8 @@
 import { resolve } from "node:path"
 import { defineConfig } from "tsdown"
 
+const root = import.meta.dirname
+
 export default defineConfig({
 	entry: {
 		cli: "src/app/cli/index.ts",
@@ -10,9 +12,9 @@ export default defineConfig({
 	dts: true,
 	clean: true,
 	alias: {
-		"@infra": resolve(__dirname, "src/infra"),
-		"@domain": resolve(__dirname, "src/domain"),
-		"@app": resolve(__dirname, "src/app"),
-		"@defs": resolve(__dirname, "src/domain/types"),
+		"@infra": resolve(root, "src/infra"),
+		"@domain": resolve(root, "src/domain"),
+		"@app": resolve(root, "src/app"),
+		"@defs": resolve(root, "src/domain/types"),
 	},
 })

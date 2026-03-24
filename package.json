@@ -1,6 +1,6 @@
 {
 	"name": "dittofy",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Analyze FE repositories to extract design essence and generate AI coding agent prompts",
 	"type": "module",
 	"bin": {
@@ -24,6 +24,7 @@
 		"build": "tsdown",
 		"test": "vitest",
 		"test:run": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
@@ -53,6 +54,7 @@
 		"@biomejs/biome": "^1.9.0",
 		"@changesets/cli": "^2.30.0",
 		"@types/node": "^22.0.0",
+		"@vitest/coverage-v8": "^3.2.4",
 		"tsdown": "^0.21.0",
 		"tsx": "^4.19.0",
 		"typescript": "^5.7.0",
