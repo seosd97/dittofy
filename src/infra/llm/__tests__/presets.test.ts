@@ -71,6 +71,16 @@ describe("TASK_PRESETS", () => {
 describe("PROVIDER_PROFILES", () => {
 	it("covers all providers", () => {
 		const keys = Object.keys(PROVIDER_PROFILES).sort()
-		expect(keys).toStrictEqual(["anthropic", "openai", "zai"])
+		expect(keys).toStrictEqual([
+			"anthropic",
+			"deepseek",
+			"gemini",
+			"groq",
+			"mistral",
+			"openai",
+			"openrouter",
+			"xai",
+			"zai",
+		])
 	})
 })

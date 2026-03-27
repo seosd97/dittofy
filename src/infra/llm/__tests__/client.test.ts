@@ -12,6 +12,26 @@ vi.mock("@ai-sdk/anthropic", () => ({
 	createAnthropic: vi.fn().mockReturnValue(vi.fn().mockReturnValue("mock-model")),
 }))
 
+vi.mock("@ai-sdk/google", () => ({
+	createGoogleGenerativeAI: vi.fn().mockReturnValue(vi.fn().mockReturnValue("mock-model")),
+}))
+
+vi.mock("@ai-sdk/groq", () => ({
+	createGroq: vi.fn().mockReturnValue(vi.fn().mockReturnValue("mock-model")),
+}))
+
+vi.mock("@ai-sdk/mistral", () => ({
+	createMistral: vi.fn().mockReturnValue(vi.fn().mockReturnValue("mock-model")),
+}))
+
+vi.mock("@ai-sdk/deepseek", () => ({
+	createDeepSeek: vi.fn().mockReturnValue(vi.fn().mockReturnValue("mock-model")),
+}))
+
+vi.mock("@ai-sdk/xai", () => ({
+	createXai: vi.fn().mockReturnValue(vi.fn().mockReturnValue("mock-model")),
+}))
+
 // Mock ai SDK — keep real Output/zodSchema, mock generateText
 vi.mock("ai", async () => {
 	const actual = await vi.importActual("ai")
@@ -21,12 +41,24 @@ vi.mock("ai", async () => {
 	}
 })
 
+import { createDeepSeek } from "@ai-sdk/deepseek"
+import { createGoogleGenerativeAI } from "@ai-sdk/google"
+import { createGroq } from "@ai-sdk/groq"
+import { createMistral } from "@ai-sdk/mistral"
+import { createOpenAI } from "@ai-sdk/openai"
+import { createXai } from "@ai-sdk/xai"
 import type { DittoConfig } from "@defs/config.js"
 import { generateText } from "ai"
 import { LLMClient, tryExtractJSON } from "../client.js"
 import { SchemaValidationError, TruncationError } from "../errors.js"
 
 const mockedGenerateText = generateText as unknown as MockInstance
+const mockedCreateOpenAI = createOpenAI as unknown as MockInstance
+const mockedCreateGoogleGenerativeAI = createGoogleGenerativeAI as unknown as MockInstance
+const mockedCreateGroq = createGroq as unknown as MockInstance
+const mockedCreateMistral = createMistral as unknown as MockInstance
+const mockedCreateDeepSeek = createDeepSeek as unknown as MockInstance
+const mockedCreateXai = createXai as unknown as MockInstance
 
 const testSchema = z.object({ name: z.string(), value: z.number() })
 
@@ -273,6 +305,97 @@ describe("LLMClient.call", () => {
 		// zai uses json_object mode — system prompt should include JSON Schema instructions
 		const callArgs = mockedGenerateText.mock.calls[0][0]
 		expect(callArgs.system).toContain("JSON Schema")
+	})
+
+	it("creates gemini provider model from api key + model id", () => {
+		const config: DittoConfig = {
+			...mockConfig,
+			provider: "gemini",
+			model: "gemini-2.5-flash",
+			apiKeys: { gemini: "test-gemini-key" },
+		}
+
+		new LLMClient(config)
+
+		expect(mockedCreateGoogleGenerativeAI).toHaveBeenCalledWith({ apiKey: "test-gemini-key" })
+		const geminiProvider = mockedCreateGoogleGenerativeAI.mock.results[0]?.value as MockInstance
+		expect(geminiProvider).toHaveBeenCalledWith("gemini-2.5-flash")
+	})
+
+	it("creates openrouter model via openai-compatible client", () => {
+		const config: DittoConfig = {
+			...mockConfig,
+			provider: "openrouter",
+			model: "openai/gpt-4o-mini",
+			apiKeys: { openrouter: "test-openrouter-key" },
+		}
+
+		new LLMClient(config)
+
+		expect(mockedCreateOpenAI).toHaveBeenCalledWith({
+			apiKey: "test-openrouter-key",
+			baseURL: "https://openrouter.ai/api/v1",
+		})
+	})
+
+	it("creates groq provider model from api key + model id", () => {
+		const config: DittoConfig = {
+			...mockConfig,
+			provider: "groq",
+			model: "llama-3.3-70b-versatile",
+			apiKeys: { groq: "test-groq-key" },
+		}
+
+		new LLMClient(config)
+
+		expect(mockedCreateGroq).toHaveBeenCalledWith({ apiKey: "test-groq-key" })
+		const groqProvider = mockedCreateGroq.mock.results[0]?.value as MockInstance
+		expect(groqProvider).toHaveBeenCalledWith("llama-3.3-70b-versatile")
+	})
+
+	it("creates mistral provider model from api key + model id", () => {
+		const config: DittoConfig = {
+			...mockConfig,
+			provider: "mistral",
+			model: "mistral-large-latest",
+			apiKeys: { mistral: "test-mistral-key" },
+		}
+
+		new LLMClient(config)
+
+		expect(mockedCreateMistral).toHaveBeenCalledWith({ apiKey: "test-mistral-key" })
+		const mistralProvider = mockedCreateMistral.mock.results[0]?.value as MockInstance
+		expect(mistralProvider).toHaveBeenCalledWith("mistral-large-latest")
+	})
+
+	it("creates deepseek provider model from api key + model id", () => {
+		const config: DittoConfig = {
+			...mockConfig,
+			provider: "deepseek",
+			model: "deepseek-chat",
+			apiKeys: { deepseek: "test-deepseek-key" },
+		}
+
+		new LLMClient(config)
+
+		expect(mockedCreateDeepSeek).toHaveBeenCalledWith({ apiKey: "test-deepseek-key" })
+		const deepseekProvider = mockedCreateDeepSeek.mock.results[0]?.value as MockInstance
+		expect(deepseekProvider).toHaveBeenCalledWith("deepseek-chat")
+	})
+
+	it("creates xai provider model from api key + model id", () => {
+		const config: DittoConfig = {
+			...mockConfig,
+			provider: "xai",
+			model: "grok-3-mini",
+			apiKeys: { xai: "test-xai-key" },
+		}
+
+		new LLMClient(config)
+
+		expect(mockedCreateXai).toHaveBeenCalledWith({ apiKey: "test-xai-key" })
+		const xaiProvider = mockedCreateXai.mock.results[0]?.value as MockInstance
+		expect(xaiProvider).toHaveBeenCalledWith("grok-3-mini")
 	})
 
 	it("throws after exhausting validation retries", async () => {

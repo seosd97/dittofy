@@ -22,7 +22,7 @@ describe("configSchema", () => {
 		expect(result.success).toBe(true)
 		if (result.success) {
 			expect(result.data.output).toBe("ditto-output")
-			expect(result.data.language).toBe("ko")
+			expect(result.data.language).toBe("en")
 			expect(result.data.model).toBe("gpt-5.4-mini")
 			expect(result.data.provider).toBe("openai")
 			expect(result.data.docsOnly).toBe(false)
@@ -85,6 +85,54 @@ describe("configSchema", () => {
 		const result = configSchema.safeParse({
 			provider: "zai",
 			apiKeys: { zai: "zai-test-key" },
+		})
+		expect(result.success).toBe(true)
+	})
+
+	it("accepts gemini provider with gemini key", () => {
+		const result = configSchema.safeParse({
+			provider: "gemini",
+			apiKeys: { gemini: "gemini-test-key" },
+		})
+		expect(result.success).toBe(true)
+	})
+
+	it("accepts openrouter provider with openrouter key", () => {
+		const result = configSchema.safeParse({
+			provider: "openrouter",
+			apiKeys: { openrouter: "openrouter-test-key" },
+		})
+		expect(result.success).toBe(true)
+	})
+
+	it("accepts groq provider with groq key", () => {
+		const result = configSchema.safeParse({
+			provider: "groq",
+			apiKeys: { groq: "groq-test-key" },
+		})
+		expect(result.success).toBe(true)
+	})
+
+	it("accepts mistral provider with mistral key", () => {
+		const result = configSchema.safeParse({
+			provider: "mistral",
+			apiKeys: { mistral: "mistral-test-key" },
+		})
+		expect(result.success).toBe(true)
+	})
+
+	it("accepts deepseek provider with deepseek key", () => {
+		const result = configSchema.safeParse({
+			provider: "deepseek",
+			apiKeys: { deepseek: "deepseek-test-key" },
+		})
+		expect(result.success).toBe(true)
+	})
+
+	it("accepts xai provider with xai key", () => {
+		const result = configSchema.safeParse({
+			provider: "xai",
+			apiKeys: { xai: "xai-test-key" },
 		})
 		expect(result.success).toBe(true)
 	})

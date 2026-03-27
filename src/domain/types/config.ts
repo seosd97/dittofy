@@ -1,4 +1,13 @@
-export type LLMProvider = "openai" | "anthropic" | "zai"
+export type LLMProvider =
+	| "openai"
+	| "anthropic"
+	| "zai"
+	| "gemini"
+	| "openrouter"
+	| "groq"
+	| "mistral"
+	| "deepseek"
+	| "xai"
 
 export interface DittoConfig {
 	output: string
@@ -9,6 +18,12 @@ export interface DittoConfig {
 		openai?: string
 		anthropic?: string
 		zai?: string
+		gemini?: string
+		openrouter?: string
+		groq?: string
+		mistral?: string
+		deepseek?: string
+		xai?: string
 	}
 	docsOnly: boolean
 	promptsOnly: boolean

@@ -1,253 +1,288 @@
-# Ditto
+# Dittofy
+
+[English](./README.md) | [한국어](./README.ko.md)
 
 [![CI](https://github.com/seosd97/dittofy/actions/workflows/ci.yml/badge.svg)](https://github.com/seosd97/dittofy/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/seosd97/dittofy/graph/badge.svg)](https://codecov.io/gh/seosd97/dittofy)
 [![npm version](https://img.shields.io/npm/v/dittofy)](https://www.npmjs.com/package/dittofy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-FE 레포지토리를 분석하여 디자인 에센스를 추출하고, AI 코딩 에이전트용 구현 프롬프트를 생성하는 CLI 도구.
+Analyze frontend repositories, extract reusable design essence, and generate implementation prompts for AI coding agents.
 
-> "레퍼런스 사이트 보고 이런 느낌으로 만들어줘" → 디자인 스펙 + 단계별 구현 프롬프트
+## What It Does
 
-## 작동 방식
+- Scans a FE codebase and builds a structured `analysis.json`.
+- Generates human-readable design spec docs from that analysis.
+- Generates step-by-step implementation prompts for coding agents.
 
-Ditto는 프론트엔드 프로젝트의 소스 코드를 분석하여 디자인 시스템의 **에센스**(색상, 타이포그래피, 레이아웃, 인터랙션 등)를 추출합니다. 원본을 1:1로 복제하는 것이 아니라, 핵심 디자인 패턴을 추출하여 **새로운 프로젝트에 적용할 수 있는 형태**로 변환합니다.
+Dittofy extracts design patterns and intent. It is not a 1:1 pixel-clone generator.
 
+## Install
+
+```bash
+npm install -g dittofy
 ```
-소스 레포 → [추출] → [분석] → [문서화] → [프롬프트 생성] → AI 에이전트가 구현
+
+You can run commands with either `ditto` or `dittofy`:
+
+```bash
+ditto --help
+dittofy --help
 ```
+
+Or use without global install:
+
+```bash
+npx dittofy analyze ./my-app
+```
+
+## Requirements
+
+- Node.js `>=22.0.0`
 
 ## Quick Start
 
 ```bash
-# 설치
-npm install -g dittofy
+# 1) Set API key for your provider
+export OPENAI_API_KEY=sk-...
 
-# API 키 설정 (.env 파일 또는 환경변수)
-echo "OPENAI_API_KEY=sk-..." > .env
-# 또는: export OPENAI_API_KEY=sk-...
-
-# 로컬 프로젝트 분석 + 생성 (한번에)
+# 2) Analyze + generate docs/prompts in one run
 ditto analyze ./my-react-app
 
-# GitHub 레포지토리 분석
-ditto analyze https://github.com/user/repo
-
-# 모노레포: 특정 앱 지정
-ditto analyze ./my-monorepo/apps/web
-
-# 분석만 (analysis.json 생성, 문서/프롬프트 나중에)
-ditto analyze ./my-react-app --analyze-only
-
-# 기존 분석으로 다른 환경용 생성 (무료, LLM 호출 없음)
-ditto generate --from ditto-output/analysis.json --target next-tailwind
+# 3) Re-generate docs/prompts later from existing analysis (no LLM calls)
+ditto generate --from ditto-output/my-react-app/analysis.json --target next-tailwind
 ```
 
-## 산출물
+## Output Artifacts
 
-분석이 완료되면 다음과 같은 구조로 결과물이 생성됩니다:
+By default, `analyze` writes into:
 
+```text
+ditto-output/<project-name>/
 ```
+
+Typical structure:
+
+```text
 ditto-output/
-├── analysis.json              # 구조화된 분석 결과 (7개 aspect + essence)
-├── analysis.md                # 사람이 읽을 수 있는 분석 요약
-├── design-spec/               # 디자인 스펙 문서
-│   ├── 01-design-tokens.md    #   색상, 간격, 반경, 그림자, 브레이크포인트
-│   ├── 02-typography.md       #   폰트, 타입 스케일, 굵기
-│   ├── 03-component-catalog.md #  컴포넌트 패턴 레퍼런스
-│   ├── 04-layout-system.md    #   그리드, 컨테이너, 네비게이션
-│   ├── 05-page-structures.md  #   페이지 구성 패턴 (동적)
-│   ├── 06-responsive-strategy.md # 반응형 전략 (동적)
-│   └── 07-interactions.md     #   애니메이션, 트랜지션 (동적)
-└── prompts/                   # AI Agent 구현 프롬프트
-    ├── README.md              #   사용 가이드 (여기서 시작!)
-    ├── step-01-setup.md
-    ├── step-02-design-tokens.md
-    ├── step-03-typography.md
-    ├── step-04-layout-shell.md
-    ├── step-05-showcase-pages.md
-    ├── step-06-responsive.md
-    └── step-07-interactions.md
+└── my-react-app/
+    ├── analysis.json
+    ├── analysis.md
+    ├── design-spec/
+    │   ├── 01-design-tokens.md
+    │   ├── 02-typography.md
+    │   ├── 03-component-catalog.md
+    │   ├── 04-layout-system.md
+    │   └── ...
+    └── prompts/
+        ├── README.md
+        ├── step-01-setup.md
+        ├── step-02-design-tokens.md
+        └── ...
 ```
 
-- **design-spec/**: 분석 결과를 사람이 읽을 수 있는 마크다운 문서로 정리한 것. 디자인 리뷰나 참고 자료로 활용.
-- **prompts/**: AI 코딩 에이전트에게 넘길 구현 프롬프트. 각 프롬프트 안에 디자인 스펙이 인라인으로 포함되어 self-contained.
-- `05~07` 문서는 충분한 데이터가 있을 때만 생성됩니다 (dynamic).
+## CLI Reference
 
-## 생성된 프롬프트 사용하기
+### `ditto analyze <source>`
 
-### 시작하기
+Analyze a local repository path or GitHub URL. This command runs LLM-based analysis unless you pass `--dry-run`.
 
-`prompts/README.md`를 열면 전체 스텝 목록, 의존 관계, 각 스텝이 무엇을 만들고 무엇을 전제하는지 정리되어 있습니다.
+Arguments:
 
-### 사용 흐름
+| Argument | Required | Description |
+| --- | --- | --- |
+| `<source>` | Yes | Local path or GitHub URL to analyze |
 
-**1. AI 코딩 에이전트를 프로젝트 디렉토리에서 열고, Step 1 파일 내용을 붙여넣기:**
+Options:
 
-```
-이 프로젝트에 디자인 시스템을 구현하려고 해. 아래 프롬프트를 읽고 실행해줘.
+| Option | Default | Description |
+| --- | --- | --- |
+| `-o, --output <dir>` | `ditto-output` | Output base directory. Final path is `<output>/<project-name>`. |
+| `-m, --model <id>` | `gpt-5.4-mini` | Model ID passed directly to the selected provider SDK. |
+| `-p, --provider <name>` | `openai` | LLM provider: `openai`, `anthropic`, `zai`, `gemini`, `openrouter`, `groq`, `mistral`, `deepseek`, `xai`. |
+| `-l, --language <ko\|en>` | `en` | Output language for analysis/docs/prompts. |
+| `--analyze-only` | `false` | Run analysis only. Writes `analysis.json` / `analysis.md`; skips docs/prompts. |
+| `--docs-only` | `false` | Generate design spec docs only; skip prompts. |
+| `--prompts-only` | `false` | Generate prompts only; skip docs. |
+| `--include <paths>` | — | Additional paths (comma-separated), mainly for monorepo shared packages. |
+| `--dry-run` | `false` | Extraction-only preview. No LLM calls, no API key required. |
+| `-d, --debug` | `false` | Enable debug logging. |
 
-(step-01-setup.md 내용 붙여넣기)
-```
+Examples:
 
-**2. 에이전트가 완료하면 결과 확인 후 다음 스텝 전달:**
-
-```
-이전 스텝 완료됐어. 다음 스텝 진행해줘.
-
-(step-02-design-tokens.md 내용 붙여넣기)
-```
-
-**3. 모든 스텝을 순서대로 반복.**
-
-### 각 스텝에서 에이전트가 하는 일
-
-각 프롬프트에는 에이전트의 행동 순서가 구조화되어 있습니다:
-
-1. **Prerequisites 확인** — 이전 스텝 완료 여부 확인
-2. **워킹 디렉토리 스캔** — 이전 스텝이 만든 파일(토큰 설정, 레이아웃 컴포넌트 등) 찾아 읽기
-3. **기존 산출물 확인** — 이 스텝이 전제하는 것들이 존재하는지 검증
-4. **Instructions 실행** — 인라인된 디자인 스펙을 참고하여 코드 작성
-5. **산출물 체크리스트 확인** — Expected Outcome에 명시된 항목들이 프로젝트에 존재하는지 검증
-
-이 구조 덕분에 에이전트가 이전 스텝의 결과물을 반드시 읽고, 그 위에 빌드합니다.
-
-### 팁
-
-- **스텝을 건너뛰지 마세요.** 각 스텝은 이전 스텝의 산출물에 의존합니다.
-- **다음으로 넘어가기 전에 확인하세요.** Expected Outcome에 나열된 항목들이 실제로 만들어졌는지 체크.
-- **추가 디자인 문서 불필요.** 모든 디자인 스펙이 프롬프트 안에 인라인되어 있습니다.
-- **프레임워크가 감지된 경우**, 프롬프트가 해당 스택에 맞춰 생성됩니다 (예: Tailwind이면 `tailwind.config`에 토큰 정의).
-
-### 고급: 에이전트에 전체 맥락 설정
-
-매번 붙여넣는 대신, `prompts/README.md`의 **Step Dependencies**와 **Artifact Flow** 섹션을 에이전트의 persistent instructions에 넣어두면 (Claude Code의 `CLAUDE.md`, Cursor의 `.cursorrules` 등) 에이전트가 항상 전체 구현 계획을 인지한 상태에서 각 스텝을 실행합니다.
-
-## 환경 인식
-
-Ditto는 소스 레포의 기술 스택을 감지하여 두 가지 모드로 프롬프트를 생성합니다:
-
-| 모드 | 조건 | 동작 |
-|------|------|------|
-| **existing-project** | 프레임워크가 중~높은 신뢰도로 감지됨 | 감지된 스택의 컨벤션에 맞춰 프롬프트 생성 (예: Next.js + Tailwind) |
-| **greenfield** | 프레임워크 미감지 또는 낮은 신뢰도 | 스택 비의존적 프롬프트 생성, 에이전트가 스택 선택 |
-
-## 파이프라인
-
-Ditto는 **2-command 분리** 설계:
-- `ditto analyze` — LLM 비용 발생 (분석)
-- `ditto generate` — 무료, 반복 가능 (생성)
-
-```
-ditto analyze:  Validation → Phase 1: Scan → Phase 2: LLM Analysis → analysis.json
-ditto generate: analysis.json → Phase 3: Docs → Phase 4: Prompts
+```bash
+ditto analyze ./apps/web
+ditto analyze https://github.com/user/repo
+ditto analyze ./apps/web --include packages/ui,packages/tokens
+ditto analyze ./apps/web --analyze-only
+ditto analyze ./apps/web --dry-run
 ```
 
-| Phase | 설명 | LLM |
-|-------|------|-----|
-| **Validation** | API 키, 모델/프로바이더 호환성 검증 | ✗ |
-| **Phase 1: Scan** | 파일 트리 스캔, 기술 스택 감지, 모노레포 감지 | ✗ |
-| **Phase 2: Analysis** | LLM이 분석 계획 수립 → Wave별 병렬 분석 → 에센스 합성 | ✓ |
-| **Phase 3: Docs** | 분석 결과를 마크다운 디자인 스펙으로 생성 | ✗ |
-| **Phase 4: Prompts** | 환경 프로파일 → 스텝 계획 → 스텝별 프롬프트 생성 | ✗ |
+### `ditto generate --from <analysis.json>`
 
-### 7개 분석 측면 (Aspects)
+Generate docs/prompts from an existing analysis file. This command is template-based and does not call LLMs.
 
-| Aspect | 분석 대상 |
-|--------|----------|
-| **tokens** | 색상 팔레트, 간격 체계, 반경, 그림자, 브레이크포인트 |
-| **typography** | 폰트 패밀리, 타입 스케일, 굵기, 줄 높이 |
-| **components** | 컴포넌트 패턴, props, 구성 방식 (참고 자료로만 사용) |
-| **layout** | 그리드 시스템, 컨테이너, 네비게이션 구조 |
-| **pages** | 페이지 구성 패턴, 섹션 배치 |
-| **responsive** | 브레이크포인트, 적응 패턴, 모바일 전략 |
-| **interactions** | 애니메이션, 트랜지션, 호버/포커스 상태 |
+Options:
 
-## CLI 옵션
+| Option | Default | Description |
+| --- | --- | --- |
+| `--from <path>` | Required | Path to `analysis.json`. |
+| `-o, --output <dir>` | `./ditto-output` | Output directory for generated docs/prompts. |
+| `-l, --language <ko\|en>` | `en` | Output language. |
+| `-t, --target <preset\|auto>` | `auto` | Target preset: `auto`, `next-tailwind`, `react-css-modules`, `vue-css`, `svelte-tailwind`. |
+| `--docs-only` | `false` | Generate docs only. |
+| `--prompts-only` | `false` | Generate prompts only. |
+| `--dry-run` | `false` | Preview what would be generated without writing files. |
 
-### `ditto analyze <source> [options]`
+Examples:
 
-| 옵션 | 설명 | 기본값 |
-|------|------|--------|
-| `<source>` | 로컬 경로 또는 GitHub URL | (필수) |
-| `--output, -o` | 출력 디렉토리 | `ditto-output` |
-| `--model, -m` | LLM 모델 | `gpt-5.4-mini` |
-| `--provider, -p` | LLM provider (`openai`, `anthropic`, `zai`) | `openai` |
-| `--language, -l` | 출력 언어 (`ko`, `en`) | `ko` |
-| `--analyze-only` | 분석만 수행 (analysis.json 생성, 문서/프롬프트 스킵) | `false` |
-| `--dry-run` | 추출만 수행 (LLM 호출 없이 구조 확인, API 키 불필요) | `false` |
-| `--include` | 추가 포함 경로 (쉼표 구분, 모노레포용) | — |
-| `--docs-only` | 디자인 스펙만 생성 (프롬프트 스킵) | `false` |
-| `--prompts-only` | 프롬프트만 재생성 (문서 스킵) | `false` |
-| `--debug, -d` | 디버그 로깅 (LLM I/O, .tmp/ 보존) | `false` |
+```bash
+ditto generate --from ditto-output/my-react-app/analysis.json
+ditto generate --from ditto-output/my-react-app/analysis.json --target next-tailwind
+ditto generate --from ditto-output/my-react-app/analysis.json --docs-only
+ditto generate --from ditto-output/my-react-app/analysis.json --dry-run
+```
 
-### `ditto generate --from <path> [options]`
+### `ditto config`
 
-| 옵션 | 설명 | 기본값 |
-|------|------|--------|
-| `--from` | analysis.json 경로 | (필수) |
-| `--output, -o` | 출력 디렉토리 | `./ditto-output` |
-| `--target, -t` | 타겟 환경 프리셋 (`auto`, `next-tailwind`, 등) | `auto` |
-| `--language, -l` | 출력 언어 (`ko`, `en`) | `en` |
-| `--dry-run` | 생성 미리보기 (파일 쓰기 없음) | `false` |
-| `--docs-only` | 디자인 스펙만 생성 | `false` |
-| `--prompts-only` | 프롬프트만 생성 | `false` |
+Manage global config at `~/.ditto/settings.json`.
 
-## 설정
+Commands:
 
-프로젝트 루트에 `ditto.config.ts`:
+| Command | Description |
+| --- | --- |
+| `ditto config show` | Show merged current config (with API key masking). |
+| `ditto config set <key> <value>` | Set a config value. |
+| `ditto config path` | Print config file path. |
 
-```typescript
+`config set` keys:
+
+| Key | Description |
+| --- | --- |
+| `output` | Default output base directory |
+| `language` | Default output language (`en` or `ko`) |
+| `model` | Default model ID |
+| `provider` | Default provider (`openai`, `anthropic`, `zai`, `gemini`, `openrouter`, `groq`, `mistral`, `deepseek`, `xai`) |
+
+API keys are not set via `config set`; use environment variables or `.env`.
+
+## Provider and Model Support
+
+Supported providers:
+
+| Provider | API key env var | Model handling | Structured output mode |
+| --- | --- | --- | --- |
+| `openai` | `OPENAI_API_KEY` | Passed to `openai.chat(<model>)` | Yes |
+| `anthropic` | `ANTHROPIC_API_KEY` | Passed to `anthropic(<model>)` | Yes |
+| `zai` | `ZAI_API_KEY` | Passed to OpenAI-compatible client at Z.AI base URL | No (`json_object` path) |
+| `gemini` | `GOOGLE_GENERATIVE_AI_API_KEY` | Passed to `google(<model>)` | Yes |
+| `openrouter` | `OPENROUTER_API_KEY` | Passed to OpenAI-compatible client at OpenRouter base URL | No (`json_object` path) |
+| `groq` | `GROQ_API_KEY` | Passed to `groq(<model>)` | Yes |
+| `mistral` | `MISTRAL_API_KEY` | Passed to `mistral(<model>)` | Yes |
+| `deepseek` | `DEEPSEEK_API_KEY` | Passed to `deepseek(<model>)` | Yes |
+| `xai` | `XAI_API_KEY` | Passed to `xai(<model>)` | Yes |
+
+Model compatibility contract:
+
+| Provider | `--model` handling | Recommended capability | Practical default |
+| --- | --- | --- | --- |
+| `openai` | Forwarded directly to `openai.chat(model)` | Chat model with reliable JSON/schema output | `gpt-5.4-mini` |
+| `anthropic` | Forwarded directly to `anthropic(model)` | Chat model with reliable JSON/schema output | Use your team standard Anthropic model ID |
+| `zai` | Forwarded to OpenAI-compatible `chat(model)` on Z.AI base URL | Chat model that follows strict JSON-object instructions | `glm-5`-class IDs are suitable |
+| `gemini` | Forwarded directly to `google(model)` | Chat model with reliable JSON/schema output | Use your team standard Gemini model ID |
+| `openrouter` | Forwarded to OpenAI-compatible `chat(model)` on OpenRouter base URL | Model that follows strict JSON-object instructions | Use a router-supported chat model ID |
+| `groq` | Forwarded directly to `groq(model)` | Fast chat model with reliable JSON/schema output | Use your team standard Groq model ID |
+| `mistral` | Forwarded directly to `mistral(model)` | Chat model with reliable JSON/schema output | Use your team standard Mistral model ID |
+| `deepseek` | Forwarded directly to `deepseek(model)` | Chat model with reliable JSON/schema output | Use your team standard DeepSeek model ID |
+| `xai` | Forwarded directly to `xai(model)` | Chat model with reliable JSON/schema output | Use your team standard xAI model ID |
+
+Model policy and guarantees:
+
+- Dittofy does not enforce a hardcoded model allowlist.
+- The `--model` value is forwarded to the selected provider SDK without rewriting.
+- Invalid/unsupported model IDs fail at provider API level and are surfaced as CLI errors.
+- OpenAI, Anthropic, Gemini, Groq, Mistral, DeepSeek, and xAI attempt schema-native structured output first.
+- Z.AI and OpenRouter use JSON-object mode in this project.
+- `analyze` uses LLM calls; `generate` is deterministic template rendering (no LLM calls).
+- Structured-output failures fall back to JSON mode.
+- Schema validation failures trigger validation retries with corrective feedback.
+- Retry policy handles transient issues (`429`, `5xx`, network timeouts). Auth/billing/permission errors fail fast.
+
+Quick validation command:
+
+```bash
+ditto analyze ./my-app --provider <provider> --model <model-id> --analyze-only
+```
+
+Runtime profile defaults:
+
+- `openai`, `anthropic`, `gemini`, `openrouter`, `groq`, `mistral`, `deepseek`, `xai`: token `1.0x`, timeout `1.0x`, max retries `3`.
+- `zai`: token `1.5x`, timeout `2.0x`, max retries `2`.
+
+Model-related failure patterns:
+
+| Symptom | Likely cause | Action |
+| --- | --- | --- |
+| `API key is required` | Missing key for selected provider | Set provider key env var from the provider table above |
+| Provider/model not found or invalid request | Wrong model ID for provider | Verify model ID in provider console and rerun |
+| Frequent `Output truncated` errors | Response exceeds output budget | Use a more capable model or narrow analysis scope (`--include`, target app path) |
+| Repeated schema validation errors | Model follows schema poorly | Try a stronger model on the same provider |
+
+## Target Presets (`generate --target`)
+
+| Preset | Framework | Language | Styling | Build |
+| --- | --- | --- | --- | --- |
+| `auto` | Auto-detected from analysis | Auto | Auto | Auto |
+| `next-tailwind` | Next.js | TypeScript | Tailwind CSS | Next.js built-in |
+| `react-css-modules` | React | TypeScript | CSS Modules | Vite |
+| `vue-css` | Vue | TypeScript | Scoped CSS | Vite |
+| `svelte-tailwind` | Svelte | TypeScript | Tailwind CSS | Vite |
+
+## Configuration and Precedence
+
+Config is merged in this order:
+
+1. Built-in defaults
+2. `~/.ditto/settings.json`
+3. Project-level config / `.env` (via `c12` loading)
+4. CLI arguments
+
+Example `ditto.config.ts`:
+
+```ts
 export default {
-  output: "my-output",
-  provider: "anthropic",
-  model: "claude-sonnet-4-20250514",
-  language: "en",
+	output: "ditto-output",
+	provider: "openai",
+	model: "gpt-5.4-mini",
+	language: "en",
 }
 ```
 
-API 키는 `.env` 파일 또는 환경변수로 설정:
+API keys:
 
 ```bash
-# .env 파일 (프로젝트 루트)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
 ZAI_API_KEY=...
-
-# 또는 환경변수로 직접 설정
-export OPENAI_API_KEY=sk-...
+GOOGLE_GENERATIVE_AI_API_KEY=...
+OPENROUTER_API_KEY=...
+GROQ_API_KEY=...
+MISTRAL_API_KEY=...
+DEEPSEEK_API_KEY=...
+XAI_API_KEY=...
 ```
 
-## 모노레포 지원
+## Monorepo Notes
 
-Ditto는 pnpm workspaces 기반 모노레포를 자동 감지합니다.
+- If you point to a specific app path, Dittofy auto-detects monorepo root and workspace deps.
+- `--include` lets you force-add shared packages for analysis context.
+- If you point to monorepo root with multiple FE apps, Dittofy asks you to choose a specific app path.
 
-```bash
-# 특정 앱 지정 (모노레포 루트를 자동 감지)
-ditto analyze ./my-monorepo/apps/web
+## Troubleshooting
 
-# 추가 패키지 포함 (공유 UI 라이브러리 등)
-ditto analyze ./my-monorepo/apps/web --include packages/ui,packages/tokens
-```
-
-- 자동으로 워크스페이스 의존성을 감지하여 관련 패키지의 파일 트리를 포함
-- 모노레포 루트를 가리키면 FE 앱 목록을 안내
-
-## 요구 사항
-
-- Node.js >= 20
-- pnpm (개발 시)
-
-## 개발
-
-```bash
-pnpm install
-pnpm dev <source>          # 개발 모드 실행
-pnpm build                 # 빌드
-pnpm test:run              # 테스트
-pnpm typecheck             # 타입 체크
-pnpm lint                  # 린트
-```
+- `API key is required`: set the key for your selected provider (see the Provider and Model Support table above).
+- `Unknown target preset`: use one of the listed presets.
+- `Analysis file not found`: run `ditto analyze` first or fix `--from` path.
 
 ## License
 

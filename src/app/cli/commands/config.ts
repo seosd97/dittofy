@@ -39,6 +39,12 @@ export const configCommand = defineCommand({
 						openai: config.apiKeys.openai ? "***configured***" : "(not set)",
 						anthropic: config.apiKeys.anthropic ? "***configured***" : "(not set)",
 						zai: config.apiKeys.zai ? "***configured***" : "(not set)",
+						gemini: config.apiKeys.gemini ? "***configured***" : "(not set)",
+						openrouter: config.apiKeys.openrouter ? "***configured***" : "(not set)",
+						groq: config.apiKeys.groq ? "***configured***" : "(not set)",
+						mistral: config.apiKeys.mistral ? "***configured***" : "(not set)",
+						deepseek: config.apiKeys.deepseek ? "***configured***" : "(not set)",
+						xai: config.apiKeys.xai ? "***configured***" : "(not set)",
 					},
 					docsOnly: config.docsOnly,
 					promptsOnly: config.promptsOnly,
@@ -74,7 +80,9 @@ export const configCommand = defineCommand({
 						`Unknown config key: "${args.key}". Allowed keys: ${ALLOWED_KEYS.join(", ")}`,
 					)
 					logger.info("For API keys, use environment variables or .env file:")
-					logger.info("  OPENAI_API_KEY, ANTHROPIC_API_KEY, ZAI_API_KEY")
+					logger.info(
+						"  OPENAI_API_KEY, ANTHROPIC_API_KEY, ZAI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY, DEEPSEEK_API_KEY, XAI_API_KEY",
+					)
 					process.exitCode = 1
 					return
 				}
