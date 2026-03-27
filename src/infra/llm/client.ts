@@ -1,7 +1,13 @@
 import { createAnthropic } from "@ai-sdk/anthropic"
+import { createDeepSeek } from "@ai-sdk/deepseek"
+import { createGoogleGenerativeAI } from "@ai-sdk/google"
+import { createGroq } from "@ai-sdk/groq"
+import { createMistral } from "@ai-sdk/mistral"
 import { createOpenAI } from "@ai-sdk/openai"
+import { createXai } from "@ai-sdk/xai"
 import type { DittoConfig, LLMProvider } from "@defs/config.js"
 import { UserError } from "@defs/errors.js"
+import { formatProviderKeyHint } from "@infra/config/provider-env.js"
 import { isDebugMode, logger } from "@infra/logger.js"
 import { Output, generateText, zodSchema } from "ai"
 import type { LanguageModel, LanguageModelUsage } from "ai"
@@ -160,6 +166,7 @@ type CallResult<T> = { object: T; usage: LanguageModelUsage }
 // ── Model factory ───────────────────────────────────────────
 
 const ZAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4"
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 function createModel(config: DittoConfig): LanguageModel {
 	const { provider, model, apiKeys } = config
@@ -169,7 +176,7 @@ function createModel(config: DittoConfig): LanguageModel {
 			const apiKey = apiKeys.openai
 			if (!apiKey) {
 				throw new UserError(
-					"OpenAI API key is required. Set OPENAI_API_KEY environment variable or configure via `ditto config set apiKeys.openai <key>`.",
+					`OpenAI API key is required. Set ${formatProviderKeyHint("openai")} environment variable or configure via \`ditto config set apiKeys.openai <key>\`.`,
 				)
 			}
 			const openai = createOpenAI({ apiKey })
@@ -179,7 +186,7 @@ function createModel(config: DittoConfig): LanguageModel {
 			const apiKey = apiKeys.anthropic
 			if (!apiKey) {
 				throw new UserError(
-					"Anthropic API key is required. Set ANTHROPIC_API_KEY environment variable or configure via `ditto config set apiKeys.anthropic <key>`.",
+					`Anthropic API key is required. Set ${formatProviderKeyHint("anthropic")} environment variable or configure via \`ditto config set apiKeys.anthropic <key>\`.`,
 				)
 			}
 			const anthropic = createAnthropic({ apiKey })
@@ -189,11 +196,71 @@ function createModel(config: DittoConfig): LanguageModel {
 			const apiKey = apiKeys.zai
 			if (!apiKey) {
 				throw new UserError(
-					"Z.AI API key is required. Set ZAI_API_KEY environment variable or configure via `ditto config set apiKeys.zai <key>`.",
+					`Z.AI API key is required. Set ${formatProviderKeyHint("zai")} environment variable or configure via \`ditto config set apiKeys.zai <key>\`.`,
 				)
 			}
 			const zai = createOpenAI({ apiKey, baseURL: ZAI_BASE_URL })
 			return zai.chat(model)
+		}
+		case "gemini": {
+			const apiKey = apiKeys.gemini
+			if (!apiKey) {
+				throw new UserError(
+					`Gemini API key is required. Set ${formatProviderKeyHint("gemini")} environment variable or configure via \`ditto config set apiKeys.gemini <key>\`.`,
+				)
+			}
+			const gemini = createGoogleGenerativeAI({ apiKey })
+			return gemini(model)
+		}
+		case "openrouter": {
+			const apiKey = apiKeys.openrouter
+			if (!apiKey) {
+				throw new UserError(
+					`OpenRouter API key is required. Set ${formatProviderKeyHint("openrouter")} environment variable or configure via \`ditto config set apiKeys.openrouter <key>\`.`,
+				)
+			}
+			const openrouter = createOpenAI({ apiKey, baseURL: OPENROUTER_BASE_URL })
+			return openrouter.chat(model)
+		}
+		case "groq": {
+			const apiKey = apiKeys.groq
+			if (!apiKey) {
+				throw new UserError(
+					`Groq API key is required. Set ${formatProviderKeyHint("groq")} environment variable or configure via \`ditto config set apiKeys.groq <key>\`.`,
+				)
+			}
+			const groq = createGroq({ apiKey })
+			return groq(model)
+		}
+		case "mistral": {
+			const apiKey = apiKeys.mistral
+			if (!apiKey) {
+				throw new UserError(
+					`Mistral API key is required. Set ${formatProviderKeyHint("mistral")} environment variable or configure via \`ditto config set apiKeys.mistral <key>\`.`,
+				)
+			}
+			const mistral = createMistral({ apiKey })
+			return mistral(model)
+		}
+		case "deepseek": {
+			const apiKey = apiKeys.deepseek
+			if (!apiKey) {
+				throw new UserError(
+					`DeepSeek API key is required. Set ${formatProviderKeyHint("deepseek")} environment variable or configure via \`ditto config set apiKeys.deepseek <key>\`.`,
+				)
+			}
+			const deepseek = createDeepSeek({ apiKey })
+			return deepseek(model)
+		}
+		case "xai": {
+			const apiKey = apiKeys.xai
+			if (!apiKey) {
+				throw new UserError(
+					`xAI API key is required. Set ${formatProviderKeyHint("xai")} environment variable or configure via \`ditto config set apiKeys.xai <key>\`.`,
+				)
+			}
+			const xai = createXai({ apiKey })
+			return xai(model)
 		}
 		default:
 			throw new UserError(`Unsupported provider: ${provider}`)

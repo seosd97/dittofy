@@ -1,17 +1,35 @@
 import { z } from "zod"
-import { PROVIDER_ENV_VARS } from "./provider-env.js"
+import { formatProviderKeyHint } from "./provider-env.js"
 
 export const configSchema = z
 	.object({
 		output: z.string().min(1).default("ditto-output"),
-		language: z.enum(["ko", "en"]).default("ko"),
+		language: z.enum(["ko", "en"]).default("en"),
 		model: z.string().default("gpt-5.4-mini"),
-		provider: z.enum(["openai", "anthropic", "zai"]).default("openai"),
+		provider: z
+			.enum([
+				"openai",
+				"anthropic",
+				"zai",
+				"gemini",
+				"openrouter",
+				"groq",
+				"mistral",
+				"deepseek",
+				"xai",
+			])
+			.default("openai"),
 		apiKeys: z
 			.object({
 				openai: z.string().optional(),
 				anthropic: z.string().optional(),
 				zai: z.string().optional(),
+				gemini: z.string().optional(),
+				openrouter: z.string().optional(),
+				groq: z.string().optional(),
+				mistral: z.string().optional(),
+				deepseek: z.string().optional(),
+				xai: z.string().optional(),
 			})
 			.default({}),
 		docsOnly: z.boolean().default(false),
@@ -23,11 +41,7 @@ export const configSchema = z
 			return key != null && key.length > 0
 		},
 		(data) => ({
-			message: `API key for provider "${data.provider}" is required. Set ${getEnvVarName(data.provider)} environment variable or configure via \`ditto config set apiKeys.${data.provider} <key>\`.`,
+			message: `API key for provider "${data.provider}" is required. Set ${formatProviderKeyHint(data.provider)} environment variable or configure via \`ditto config set apiKeys.${data.provider} <key>\`.`,
 			path: ["apiKeys", data.provider],
 		}),
 	)
-
-function getEnvVarName(provider: string): string {
-	return PROVIDER_ENV_VARS[provider] ?? `${provider.toUpperCase()}_API_KEY`
-}

@@ -52,6 +52,42 @@ export const PROVIDER_PROFILES: Record<LLMProvider, ProviderProfile> = {
 		maxRetries: 2,
 		supportsStructuredOutput: false,
 	},
+	gemini: {
+		tokenMultiplier: 1.0,
+		timeoutMultiplier: 1.0,
+		maxRetries: 3,
+		supportsStructuredOutput: true,
+	},
+	openrouter: {
+		tokenMultiplier: 1.0,
+		timeoutMultiplier: 1.0,
+		maxRetries: 3,
+		supportsStructuredOutput: false,
+	},
+	groq: {
+		tokenMultiplier: 1.0,
+		timeoutMultiplier: 1.0,
+		maxRetries: 3,
+		supportsStructuredOutput: true,
+	},
+	mistral: {
+		tokenMultiplier: 1.0,
+		timeoutMultiplier: 1.0,
+		maxRetries: 3,
+		supportsStructuredOutput: true,
+	},
+	deepseek: {
+		tokenMultiplier: 1.0,
+		timeoutMultiplier: 1.0,
+		maxRetries: 3,
+		supportsStructuredOutput: true,
+	},
+	xai: {
+		tokenMultiplier: 1.0,
+		timeoutMultiplier: 1.0,
+		maxRetries: 3,
+		supportsStructuredOutput: true,
+	},
 }
 
 // ── Resolver ────────────────────────────────────────────────

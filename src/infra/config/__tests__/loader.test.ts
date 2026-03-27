@@ -19,6 +19,14 @@ vi.mock("@infra/fs.js", () => ({
 	},
 }))
 
+function restoreEnv(key: string, original: string | undefined): void {
+	if (original === undefined) {
+		delete process.env[key]
+	} else {
+		process.env[key] = original
+	}
+}
+
 describe("loadDittoConfig", () => {
 	beforeAll(async () => {
 		await mkdir(testHome, { recursive: true })
@@ -34,7 +42,7 @@ describe("loadDittoConfig", () => {
 		const config = await loadDittoConfig({ apiKeys: { openai: "sk-test" } })
 		expect(config.model).toBe("gpt-5.4-mini")
 		expect(config.provider).toBe("openai")
-		expect(config.language).toBe("ko")
+		expect(config.language).toBe("en")
 	})
 
 	it("settings.json overrides defaults", async () => {
@@ -47,7 +55,7 @@ describe("loadDittoConfig", () => {
 		const config = await loadDittoConfig({ apiKeys: { zai: "zai-test" } })
 		expect(config.model).toBe("glm-5")
 		expect(config.provider).toBe("zai")
-		expect(config.language).toBe("ko")
+		expect(config.language).toBe("en")
 
 		// Cleanup
 		await rm(join(testHome, "settings.json"), { force: true })
@@ -74,6 +82,6 @@ describe("loadDittoConfig", () => {
 		const config = await loadDittoConfig()
 		expect(config.apiKeys.openai).toBe("sk-from-env")
 
-		process.env.OPENAI_API_KEY = originalKey ?? ""
+		restoreEnv("OPENAI_API_KEY", originalKey)
 	})
 })

@@ -39,12 +39,13 @@ export const analyzeCommand = defineCommand({
 		provider: {
 			type: "string",
 			alias: "p",
-			description: "LLM provider: openai, anthropic, or zai (default: openai)",
+			description:
+				"LLM provider: openai, anthropic, zai, gemini, openrouter, groq, mistral, deepseek, or xai (default: openai)",
 		},
 		language: {
 			type: "string",
 			alias: "l",
-			description: "Output language: ko or en (default: ko)",
+			description: "Output language: ko or en (default: en)",
 		},
 		"analyze-only": {
 			type: "boolean",

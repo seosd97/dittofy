@@ -17,6 +17,7 @@ import {
 	renderMonorepoTree,
 	renderProjectMeta,
 } from "@domain/rendering/tree-renderer.js"
+import { formatProviderKeyHint } from "@infra/config/provider-env.js"
 import { ensureDir, readFileContent, writeFileContent } from "@infra/fs.js"
 import type { ILLMClient } from "@infra/llm/client.js"
 import type { UsageTracker } from "@infra/llm/usage.js"
@@ -85,11 +86,15 @@ export interface GeneratePipelineResult {
 // ── Early Validation ─────────────────────────────────────
 
 const API_KEY_MESSAGES: Record<LLMProvider, string> = {
-	openai:
-		"OpenAI API key is required. Set OPENAI_API_KEY environment variable or configure via `ditto config set apiKeys.openai <key>`.",
-	anthropic:
-		"Anthropic API key is required. Set ANTHROPIC_API_KEY environment variable or configure via `ditto config set apiKeys.anthropic <key>`.",
-	zai: "Z.AI API key is required. Set ZAI_API_KEY environment variable or configure via `ditto config set apiKeys.zai <key>`.",
+	openai: `OpenAI API key is required. Set ${formatProviderKeyHint("openai")} environment variable or configure via \`ditto config set apiKeys.openai <key>\`.`,
+	anthropic: `Anthropic API key is required. Set ${formatProviderKeyHint("anthropic")} environment variable or configure via \`ditto config set apiKeys.anthropic <key>\`.`,
+	zai: `Z.AI API key is required. Set ${formatProviderKeyHint("zai")} environment variable or configure via \`ditto config set apiKeys.zai <key>\`.`,
+	gemini: `Gemini API key is required. Set ${formatProviderKeyHint("gemini")} environment variable or configure via \`ditto config set apiKeys.gemini <key>\`.`,
+	openrouter: `OpenRouter API key is required. Set ${formatProviderKeyHint("openrouter")} environment variable or configure via \`ditto config set apiKeys.openrouter <key>\`.`,
+	groq: `Groq API key is required. Set ${formatProviderKeyHint("groq")} environment variable or configure via \`ditto config set apiKeys.groq <key>\`.`,
+	mistral: `Mistral API key is required. Set ${formatProviderKeyHint("mistral")} environment variable or configure via \`ditto config set apiKeys.mistral <key>\`.`,
+	deepseek: `DeepSeek API key is required. Set ${formatProviderKeyHint("deepseek")} environment variable or configure via \`ditto config set apiKeys.deepseek <key>\`.`,
+	xai: `xAI API key is required. Set ${formatProviderKeyHint("xai")} environment variable or configure via \`ditto config set apiKeys.xai <key>\`.`,
 }
 
 /** Validates config before any expensive work (extraction, LLM calls). */
