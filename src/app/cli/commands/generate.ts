@@ -70,7 +70,7 @@ export const generateCommand = defineCommand({
 		}
 
 		if (args["dry-run"]) {
-			const { validateGenerateInput } = await import("@app/pipeline/orchestrator.js")
+			const { validateGenerateInput } = await import("@app/pipeline/validation.js")
 			const { assembleDocuments } = await import("@app/pipeline/doc-assembler.js")
 			const { assemblePrompts } = await import("@app/pipeline/prompt-assembler.js")
 			const { resolveEnvironment } = await import("@domain/rendering/resolve-environment.js")

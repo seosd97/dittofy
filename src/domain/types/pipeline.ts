@@ -1,21 +1,8 @@
-import type { DittoConfig } from "./config.js"
-
 export type ConfidenceLevel = "high" | "medium" | "low"
 
 export interface Confident<T> {
 	value: T
 	confidence: ConfidenceLevel
-}
-
-export interface PipelineContext {
-	config: DittoConfig
-	source: string
-	resolvedPath: string
-	projectName: string
-	outputDir: string
-	startTime: number
-	llmClient: import("@infra/llm/client.js").ILLMClient
-	usage: import("@infra/llm/usage.js").UsageTracker
 }
 
 export type PhaseStatus = "pending" | "running" | "completed" | "failed" | "partial"

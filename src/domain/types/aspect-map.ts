@@ -1,12 +1,22 @@
-import type {
+import type { ComponentCatalog, ComponentInfo } from "@domain/aspects/components/schema.js"
+import type { InteractionPatterns } from "@domain/aspects/interactions/schema.js"
+import type { LayoutSystem } from "@domain/aspects/layout/schema.js"
+import type { PageStructures } from "@domain/aspects/pages/schema.js"
+import type { ResponsiveStrategy } from "@domain/aspects/responsive/schema.js"
+import type { DesignTokens } from "@domain/aspects/tokens/schema.js"
+import type { TypographySystem } from "@domain/aspects/typography/schema.js"
+
+// Re-export aspect types for convenience
+export type {
 	ComponentCatalog,
+	ComponentInfo,
 	DesignTokens,
 	InteractionPatterns,
 	LayoutSystem,
 	PageStructures,
 	ResponsiveStrategy,
 	TypographySystem,
-} from "./analysis.js"
+}
 
 /**
  * 단일 진실 원천: aspect 이름 → 분석 결과 타입 매핑.

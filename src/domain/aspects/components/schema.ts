@@ -56,3 +56,4 @@ export const componentCatalogSchema = z.object({
 })
 
 export type ComponentCatalog = z.infer<typeof componentCatalogSchema>
+export type ComponentInfo = z.infer<typeof componentInfoSchema>

@@ -1,4 +1,8 @@
-import { consistencyMetricsSchema, designNotesSchema } from "@defs/schema-utils.js"
+import {
+	consistencyMetricsSchema,
+	designNotesSchema,
+	tokenValueSchema,
+} from "@defs/schema-utils.js"
 import { z } from "zod"
 
 const typographyScaleSchema = z.object({
@@ -7,11 +11,6 @@ const typographyScaleSchema = z.object({
 	lineHeight: z.string().nullable().optional(),
 	fontWeight: z.string().nullable().optional(),
 	usage: z.string().describe("Where this scale is used"),
-})
-
-const tokenValueSchema = z.object({
-	name: z.string(),
-	value: z.string(),
 })
 
 const fontFamilyDefSchema = z.object({
@@ -44,3 +43,5 @@ export const typographySystemSchema = z.object({
 	consistency: consistencyMetricsSchema.nullable().optional(),
 	designNotes: designNotesSchema,
 })
+
+export type TypographySystem = z.infer<typeof typographySystemSchema>

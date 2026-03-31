@@ -19,4 +19,14 @@ export const designNotesSchema = z
 	.nullable()
 	.optional()
 
+export type MaturityLevel = z.infer<typeof maturityLevelSchema>
+export type ConsistencyMetrics = z.infer<typeof consistencyMetricsSchema>
 export type DesignNotes = z.infer<typeof designNotesSchema>
+
+/** Shared schema: a simple name/value pair used across tokens, typography, responsive, etc. */
+export const tokenValueSchema = z.object({
+	name: z.string(),
+	value: z.string(),
+})
+
+export type TokenValue = z.infer<typeof tokenValueSchema>

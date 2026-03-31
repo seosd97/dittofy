@@ -42,3 +42,5 @@ export const layoutSystemSchema = z.object({
 	consistency: consistencyMetricsSchema.nullable().optional(),
 	designNotes: designNotesSchema,
 })
+
+export type LayoutSystem = z.infer<typeof layoutSystemSchema>

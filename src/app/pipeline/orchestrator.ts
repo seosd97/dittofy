@@ -1,14 +1,13 @@
-import { access } from "node:fs/promises"
-import { relative, resolve } from "node:path"
+import { resolve } from "node:path"
 import type { AnalysisResult } from "@defs/analysis.js"
-import type { DittoConfig, LLMProvider } from "@defs/config.js"
-import { UserError } from "@defs/errors.js"
+import type { DittoConfig } from "@defs/config.js"
 import type { FileTreeNode } from "@defs/extraction.js"
+import type { ExtractionOutput } from "@defs/extraction.js"
 import type { PhaseError } from "@defs/pipeline.js"
 import type { AnalysisPlan } from "@domain/analysis/plan-parser.js"
 import { formatReconciliation, reconcileAnalysis } from "@domain/analysis/reconciliation.js"
 import { evaluateAnalysisViability } from "@domain/analysis/viability.js"
-import { listTargetPresets } from "@domain/constants/target-presets.js"
+import { TIER_THRESHOLDS } from "@domain/constants/analysis.js"
 import { renderAnalysisMarkdown } from "@domain/rendering/analysis-renderer.js"
 import { resolveEnvironment } from "@domain/rendering/resolve-environment.js"
 import {
@@ -17,26 +16,22 @@ import {
 	renderMonorepoTree,
 	renderProjectMeta,
 } from "@domain/rendering/tree-renderer.js"
-import { formatProviderKeyHint } from "@infra/config/provider-env.js"
-import { ensureDir, readFileContent, writeFileContent } from "@infra/fs.js"
+import { ensureDir, writeFileContent } from "@infra/fs.js"
 import type { ILLMClient } from "@infra/llm/client.js"
 import type { UsageTracker } from "@infra/llm/usage.js"
 import { logger, phaseFail, phaseStart, phaseSuccess } from "@infra/logger.js"
 import { writeDocuments } from "@infra/output/docs.js"
 import { writePrompts } from "@infra/output/prompts.js"
-import { type ExtractionOutput, runExtraction } from "@infra/source/index.js"
+import { runExtraction } from "@infra/source/index.js"
 import { resolveRepo } from "@infra/source/repo-resolver.js"
-import {
-	detectApps,
-	findMonorepoRoot,
-	resolveWorkspaceDeps,
-} from "@infra/source/workspace-detector.js"
 import { assembleDocuments } from "./doc-assembler.js"
 import { synthesizeEssence } from "./essence-synthesizer.js"
 import { loadSelectedFiles, resolveFiles } from "./file-loader.js"
+import { detectMonorepo } from "./monorepo-utils.js"
 import { createPipelineContext } from "./pipeline-context.js"
 import { planAnalysis } from "./planner.js"
 import { assemblePrompts } from "./prompt-assembler.js"
+import { validateAnalysisConfig, validateGenerateInput } from "./validation.js"
 import { executeWaves } from "./wave-executor.js"
 import { createWorkspace } from "./workspace.js"
 
@@ -83,88 +78,6 @@ export interface GeneratePipelineResult {
 	errors: PhaseError[]
 }
 
-// ── Early Validation ─────────────────────────────────────
-
-const API_KEY_MESSAGES: Record<LLMProvider, string> = {
-	openai: `OpenAI API key is required. Set ${formatProviderKeyHint("openai")} environment variable or configure via \`ditto config set apiKeys.openai <key>\`.`,
-	anthropic: `Anthropic API key is required. Set ${formatProviderKeyHint("anthropic")} environment variable or configure via \`ditto config set apiKeys.anthropic <key>\`.`,
-	zai: `Z.AI API key is required. Set ${formatProviderKeyHint("zai")} environment variable or configure via \`ditto config set apiKeys.zai <key>\`.`,
-	gemini: `Gemini API key is required. Set ${formatProviderKeyHint("gemini")} environment variable or configure via \`ditto config set apiKeys.gemini <key>\`.`,
-	openrouter: `OpenRouter API key is required. Set ${formatProviderKeyHint("openrouter")} environment variable or configure via \`ditto config set apiKeys.openrouter <key>\`.`,
-	groq: `Groq API key is required. Set ${formatProviderKeyHint("groq")} environment variable or configure via \`ditto config set apiKeys.groq <key>\`.`,
-	mistral: `Mistral API key is required. Set ${formatProviderKeyHint("mistral")} environment variable or configure via \`ditto config set apiKeys.mistral <key>\`.`,
-	deepseek: `DeepSeek API key is required. Set ${formatProviderKeyHint("deepseek")} environment variable or configure via \`ditto config set apiKeys.deepseek <key>\`.`,
-	xai: `xAI API key is required. Set ${formatProviderKeyHint("xai")} environment variable or configure via \`ditto config set apiKeys.xai <key>\`.`,
-}
-
-/** Validates config before any expensive work (extraction, LLM calls). */
-export function validateAnalysisConfig(config: DittoConfig): void {
-	const key = config.apiKeys[config.provider]
-	if (!key) {
-		throw new UserError(API_KEY_MESSAGES[config.provider])
-	}
-
-	if (config.provider === "zai") {
-		logger.debug("Provider zai: json_object mode only (no structured output)")
-	}
-}
-
-/** Validates generate pipeline inputs before any work. */
-export async function validateGenerateInput(
-	generateConfig: GenerateConfig,
-): Promise<AnalysisResult> {
-	// File existence
-	try {
-		await access(generateConfig.analysisPath)
-	} catch {
-		throw new UserError(
-			`Analysis file not found: ${generateConfig.analysisPath}\nRun \`ditto analyze\` first to generate it.`,
-		)
-	}
-
-	// JSON parsing
-	let raw: string
-	try {
-		raw = await readFileContent(generateConfig.analysisPath)
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error)
-		throw new UserError(`Failed to read analysis file: ${message}`)
-	}
-
-	let parsed: unknown
-	try {
-		parsed = JSON.parse(raw)
-	} catch {
-		throw new UserError(
-			`Invalid JSON in analysis file: ${generateConfig.analysisPath}\nThe file may be corrupted. Re-run \`ditto analyze\` to regenerate it.`,
-		)
-	}
-
-	// Basic shape validation
-	if (typeof parsed !== "object" || parsed === null) {
-		throw new UserError("Analysis file does not contain a valid JSON object.")
-	}
-	const obj = parsed as Record<string, unknown>
-	if (!obj.techStack) {
-		throw new UserError("Analysis file is missing required field: techStack")
-	}
-	if (!obj.essence) {
-		throw new UserError("Analysis file is missing required field: essence")
-	}
-
-	// Target preset validation
-	if (generateConfig.target) {
-		const known = listTargetPresets()
-		if (!known.includes(generateConfig.target)) {
-			throw new UserError(
-				`Unknown target preset: "${generateConfig.target}". Available presets: ${known.join(", ")}`,
-			)
-		}
-	}
-
-	return parsed as AnalysisResult
-}
-
 /**
  * Phase 1-2: Health Check + Extraction + Analysis → analysis.json
  */
@@ -188,53 +101,23 @@ export async function runAnalysisPipeline(
 		workspace = await createWorkspace(ctx.projectName)
 
 		// Detect monorepo
-		const monorepoRoot = await findMonorepoRoot(resolved.localPath)
-		const isMonorepo = !!monorepoRoot
-		let rootPath = resolved.localPath
-		let targetRelative = ""
-		let depPackagePaths: string[] = []
+		const monorepoResult = await detectMonorepo(resolved.localPath, { failOnMultipleApps: true })
 
-		if (isMonorepo && monorepoRoot) {
-			const rootPath_m = monorepoRoot
-			const targetRelative_m = relative(rootPath_m, resolved.localPath)
-
-			logger.info(`Monorepo detected: root=${rootPath_m}`)
-			logger.info(`Target: ${targetRelative_m}`)
-
-			// Check if user pointed at the root itself (not a specific app)
-			if (targetRelative_m === "" || targetRelative_m === ".") {
-				const apps = await detectApps(rootPath_m)
-				if (apps.length > 1) {
-					const appList = apps.map((a) => `  - ${a}`).join("\n")
-					phaseFail(
-						"Phase 1",
-						`Multiple apps detected in monorepo. Please specify one:\n${appList}`,
-					)
-					return {
-						success: false,
-						analysisJsonPath: "",
-						outputDir: ctx.outputDir,
-						duration: Date.now() - startTime,
-						errors: [
-							{
-								phase: "Phase 1",
-								message: `Multiple apps: ${apps.join(", ")}`,
-							},
-						],
-					}
-				}
+		if (monorepoResult.error) {
+			phaseFail(monorepoResult.error.phase, monorepoResult.error.message)
+			return {
+				success: false,
+				analysisJsonPath: "",
+				outputDir: ctx.outputDir,
+				duration: Date.now() - startTime,
+				errors: [{ phase: monorepoResult.error.phase, message: monorepoResult.error.message }],
 			}
-
-			// Resolve workspace dependencies
-			const depPaths = await resolveWorkspaceDeps(resolved.localPath, rootPath_m)
-			if (depPaths.length > 0) {
-				logger.info(`Monorepo: workspace deps = ${depPaths.join(", ")}`)
-			}
-
-			rootPath = rootPath_m
-			targetRelative = targetRelative_m
-			depPackagePaths = depPaths
 		}
+
+		const isMonorepo = !!monorepoResult.info
+		const rootPath = monorepoResult.info?.rootPath ?? resolved.localPath
+		const targetRelative = monorepoResult.info?.targetRelative ?? ""
+		const depPackagePaths = monorepoResult.info?.depPaths ?? []
 
 		// Phase 1: Extraction
 		phaseStart("Phase 1", "Scanning and collecting files...")
@@ -352,15 +235,24 @@ export async function runAnalysisPipeline(
 		}
 
 		// Resolve and validate file selection (throws FileSelectionError if <50% match)
-		resolveFiles(plan, extraction.extraction.fileTree, targetRelative)
+		const { plan: resolvedPlan } = resolveFiles(
+			plan,
+			extraction.extraction.fileTree,
+			targetRelative,
+			{
+				debug: (msg: string) => logger.debug(msg),
+				warn: (msg: string) => logger.warn(msg),
+				info: (msg: string) => logger.info(msg),
+			},
+		)
 
 		// Load selected files from disk (lazy loading — only what planner selected)
 		const codeChunks = await loadSelectedFiles(
-			plan,
+			resolvedPlan,
 			rootPath,
 			depPackagePaths.length > 0 ? depPackagePaths : undefined,
 		)
-		const totalSelectedFiles = [...new Set(Object.values(plan.fileSelection).flat())].length
+		const totalSelectedFiles = [...new Set(Object.values(resolvedPlan.fileSelection).flat())].length
 		const hasFileSelection = totalSelectedFiles > 0
 
 		if (hasFileSelection && codeChunks.length === 0) {
@@ -376,9 +268,12 @@ export async function runAnalysisPipeline(
 		}
 
 		// Phase 2 - Pass 2: Wave Execution
-		phaseStart("Phase 2", `Running ${plan.aspects.length} analyzers in ${plan.waves.length} waves`)
+		phaseStart(
+			"Phase 2",
+			`Running ${resolvedPlan.aspects.length} analyzers in ${resolvedPlan.waves.length} waves`,
+		)
 		const { results: analysisResults, failedAnalyzers } = await executeWaves({
-			plan,
+			plan: resolvedPlan,
 			codeChunks,
 			extraction,
 			workspace,
@@ -388,8 +283,8 @@ export async function runAnalysisPipeline(
 			concurrency: 3,
 		})
 
-		const succeededCount = plan.aspects.length - failedAnalyzers.length
-		logger.info(`Phase 2: ${succeededCount}/${plan.aspects.length} analyzers completed`)
+		const succeededCount = resolvedPlan.aspects.length - failedAnalyzers.length
+		logger.info(`Phase 2: ${succeededCount}/${resolvedPlan.aspects.length} analyzers completed`)
 
 		if (failedAnalyzers.length > 0) {
 			logger.warn(`${failedAnalyzers.length} analyzers failed: ${failedAnalyzers.join(", ")}`)
@@ -413,7 +308,9 @@ export async function runAnalysisPipeline(
 		}
 
 		// Phase 2 - Pass 3: Reconciliation + Essence
-		const reconciliation = reconcileAnalysis(analysisResults)
+		const reconciliation = reconcileAnalysis(analysisResults, {
+			info: (msg: string) => logger.info(msg),
+		})
 		if (reconciliation.conflicts.length > 0) {
 			await workspace.writeMarkdown("reconciliation.md", formatReconciliation(reconciliation))
 		}
@@ -456,7 +353,12 @@ export async function runAnalysisPipeline(
 				analyzedAt: new Date().toISOString(),
 				source,
 				dittoVersion: "0.1.0",
-				tier: plan.aspects.length <= 3 ? "MINIMAL" : plan.aspects.length >= 7 ? "FULL" : "STANDARD",
+				tier:
+					resolvedPlan.aspects.length <= TIER_THRESHOLDS.minimal
+						? "MINIMAL"
+						: resolvedPlan.aspects.length >= TIER_THRESHOLDS.full
+							? "FULL"
+							: "STANDARD",
 				duration: Date.now() - startTime,
 				monorepo: isMonorepo ? { root: rootPath, target: targetRelative } : undefined,
 			},
@@ -503,7 +405,10 @@ export async function runGeneratePipeline(
 	const analysisResult = await validateGenerateInput(generateConfig)
 
 	// Resolve environment (with optional target override from CLI)
-	const env = resolveEnvironment(analysisResult.techStack, generateConfig.target)
+	const env = resolveEnvironment(analysisResult.techStack, generateConfig.target, {
+		info: (msg: string) => logger.info(msg),
+		warn: (msg: string) => logger.warn(msg),
+	})
 
 	const outputDir = generateConfig.output
 

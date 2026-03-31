@@ -2,13 +2,13 @@ import { runAnalyzer } from "@app/runner.js"
 import type { AnalysisResultMap, AspectName } from "@defs/aspect-map.js"
 import type { AspectDescriptor } from "@defs/descriptor.js"
 import type { CodeChunk } from "@defs/extraction.js"
+import type { ExtractionOutput } from "@defs/extraction.js"
 import type { AnalysisPlan } from "@domain/analysis/plan-parser.js"
 import { ASPECT_REGISTRY } from "@domain/aspects/registry.js"
 import { summarizeResults } from "@domain/rendering/aspect-summarizer.js"
 import type { ILLMClient } from "@infra/llm/client.js"
 import type { UsageTracker } from "@infra/llm/usage.js"
 import { logger } from "@infra/logger.js"
-import type { ExtractionOutput } from "@infra/source/index.js"
 import type { Workspace } from "./workspace.js"
 
 export interface WaveExecutorOptions {
@@ -110,7 +110,15 @@ function createConcurrencyLimiter(limit: number) {
 	let active = 0
 	const queue: (() => void)[] = []
 
-	function release() {
+	function acquire(): Promise<void> {
+		if (active < limit) {
+			active++
+			return Promise.resolve()
+		}
+		return new Promise<void>((resolve) => queue.push(resolve))
+	}
+
+	function release(): void {
 		active--
 		if (queue.length > 0) {
 			active++
@@ -120,11 +128,7 @@ function createConcurrencyLimiter(limit: number) {
 	}
 
 	return async <T>(fn: () => Promise<T>): Promise<T> => {
-		if (active >= limit) {
-			await new Promise<void>((resolve) => queue.push(resolve))
-		} else {
-			active++
-		}
+		await acquire()
 		try {
 			return await fn()
 		} finally {

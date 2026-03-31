@@ -1,5 +1,4 @@
-import type { FileTreeNode } from "@defs/extraction.js"
-import type { ExtractionOutput } from "@infra/source/index.js"
+import type { ExtractionOutput, FileTreeNode } from "@defs/extraction.js"
 
 // ── Constants ───────────────────────────────────────────────
 

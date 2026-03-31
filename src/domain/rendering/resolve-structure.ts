@@ -1,5 +1,4 @@
 import type { StepType } from "@defs/prompts.js"
-import type { EnvironmentProfile } from "./resolve-environment.js"
 import { type StylingProfile, resolveStylingProfile } from "./styling-profiles.js"
 
 /**
@@ -65,16 +64,20 @@ interface StyleFiles {
 	animations: string
 }
 
-export function resolveProjectStructure(env: EnvironmentProfile): ProjectStructure {
-	const framework = env.framework.toLowerCase()
-	const styling = env.styling.toLowerCase()
+export function resolveProjectStructure(opts: {
+	framework: string
+	language: string
+	styling: string
+}): ProjectStructure {
+	const framework = opts.framework.toLowerCase()
+	const styling = opts.styling.toLowerCase()
 	const profile = resolveStylingProfile(styling)
 
-	const componentExt = resolveComponentExt(env)
-	const scriptExt = resolveScriptExt(env)
+	const componentExt = resolveComponentExt(framework, opts.language)
+	const scriptExt = resolveScriptExt(opts.language)
 
 	if (framework.includes("next")) {
-		return buildNextStructure(env, componentExt, scriptExt, profile)
+		return buildNextStructure(componentExt, scriptExt, profile, framework)
 	}
 	if (framework.includes("nuxt")) {
 		return buildNuxtStructure(componentExt, scriptExt, profile)
@@ -89,17 +92,17 @@ export function resolveProjectStructure(env: EnvironmentProfile): ProjectStructu
 	return buildReactSpaStructure(componentExt, scriptExt, profile)
 }
 
-function resolveComponentExt(env: EnvironmentProfile): string {
-	const lang = env.language.toLowerCase()
-	const framework = env.framework.toLowerCase()
+function resolveComponentExt(framework: string, language: string): string {
+	const fw = framework.toLowerCase()
+	const lang = language.toLowerCase()
 
-	if (framework.includes("vue") || framework.includes("nuxt")) return ".vue"
-	if (framework.includes("svelte")) return ".svelte"
+	if (fw.includes("vue") || fw.includes("nuxt")) return ".vue"
+	if (fw.includes("svelte")) return ".svelte"
 	return lang.includes("typescript") ? ".tsx" : ".jsx"
 }
 
-function resolveScriptExt(env: EnvironmentProfile): string {
-	return env.language.toLowerCase().includes("typescript") ? ".ts" : ".js"
+function resolveScriptExt(language: string): string {
+	return language.toLowerCase().includes("typescript") ? ".ts" : ".js"
 }
 
 function resolveStyleFiles(stylesDir: string, profile: StylingProfile): StyleFiles {
@@ -127,12 +130,12 @@ function resolveGlobalsFile(stylesDir: string, profile: StylingProfile): string 
 // ── Framework-specific builders ──
 
 function buildNextStructure(
-	env: EnvironmentProfile,
 	ext: string,
 	scriptExt: string,
 	profile: StylingProfile,
+	framework: string,
 ): ProjectStructure {
-	const isAppRouter = !env.framework.toLowerCase().includes("pages")
+	const isAppRouter = !framework.toLowerCase().includes("pages")
 	const stylesDir = "src/styles"
 	const utilsDir = "src/lib/utils"
 
@@ -314,6 +317,92 @@ function buildReactSpaStructure(
 
 // ── File structure guide builders ──
 
+function buildSetupGuide(s: ProjectStructure): string[] {
+	const lines: string[] = []
+	lines.push(`${s.stylingConfig}              # styling/token configuration`)
+	lines.push(`${s.stylesDir}/`)
+	lines.push(`  ${basename(s.tokensFile)}                    # design token definitions`)
+	lines.push(
+		`  ${basename(s.globalsFile)}                   # global base styles (reset, body defaults)`,
+	)
+	lines.push(`${s.layoutDir}/                    # layout components (created in later steps)`)
+	lines.push(`${s.uiDir}/                        # UI components (created in later steps)`)
+	lines.push(`${s.utilsDir}/`)
+	lines.push(`  ${basename(s.utilFiles.cn)}                       # className merge utility`)
+	return lines
+}
+
+function buildDesignTokensGuide(s: ProjectStructure): string[] {
+	const lines: string[] = [`${s.tokensFile}                    # all token definitions go here`]
+	if (s.stylingConfig) {
+		lines.push(`${s.stylingConfig}              # extend theme with token values`)
+	}
+	return lines
+}
+
+function buildTypographyGuide(s: ProjectStructure): string[] {
+	const lines: string[] = [
+		`${s.tokensFile}                    # add typography tokens (extend existing)`,
+	]
+	if (s.stylingConfig) {
+		lines.push(`${s.stylingConfig}              # extend theme with typography values`)
+	}
+	return lines
+}
+
+function buildLayoutShellGuide(s: ProjectStructure): string[] {
+	return [
+		`${s.rootLayout}                    # root layout / app shell`,
+		`${s.layoutDir}/`,
+		`  ${basename(s.layoutFiles.header)}                  # site header`,
+		`  ${basename(s.layoutFiles.footer)}                  # site footer`,
+		`  ${basename(s.layoutFiles.navigation)}              # navigation component`,
+		`  ${basename(s.layoutFiles.pageContainer)}           # page container (max-width, padding)`,
+	]
+}
+
+function buildShowcasePagesGuide(s: ProjectStructure): string[] {
+	return [
+		`${s.pageFiles.home}                # home showcase page`,
+		`${s.pageFiles.about}               # about showcase page`,
+		`${s.uiDir}/`,
+		`  Button${s.componentExt}                      # button component`,
+		`  Card${s.componentExt}                        # card component`,
+		`  Section${s.componentExt}                     # section container component`,
+	]
+}
+
+function buildResponsiveGuide(s: ProjectStructure): string[] {
+	return [
+		`${s.rootLayout}                    # responsive shell adjustments`,
+		`${s.layoutFiles.header}            # responsive header / mobile nav`,
+		`${s.layoutFiles.navigation}        # responsive navigation behavior`,
+		`${s.pageFiles.home}                # responsive home page`,
+		`${s.pageFiles.about}               # responsive about page`,
+	]
+}
+
+function buildInteractionsGuide(s: ProjectStructure): string[] {
+	return [
+		`${s.pageFiles.home}                # page transitions, scroll effects`,
+		`${s.pageFiles.about}               # page transitions`,
+		`${s.uiDir}/Button${s.componentExt}             # hover/active/focus states`,
+		`${s.uiDir}/Card${s.componentExt}               # hover effects`,
+		`${s.styleFiles.animations}         # shared keyframes / animation definitions`,
+		`${s.utilFiles.animations}           # animation utility functions (optional)`,
+	]
+}
+
+const stepBuilders: Record<StepType, (s: ProjectStructure) => string[]> = {
+	setup: buildSetupGuide,
+	"design-tokens": buildDesignTokensGuide,
+	typography: buildTypographyGuide,
+	"layout-shell": buildLayoutShellGuide,
+	"showcase-pages": buildShowcasePagesGuide,
+	responsive: buildResponsiveGuide,
+	interactions: buildInteractionsGuide,
+}
+
 /**
  * Builds a file structure guide section for a specific step type.
  * Injected into the prompt text sent to the LLM so it generates
@@ -326,117 +415,36 @@ export function buildFileStructureGuide(stepType: StepType, structure: ProjectSt
 	lines.push("Use the following file paths. Do NOT deviate from this structure:")
 	lines.push("")
 
-	switch (stepType) {
-		case "setup":
-			lines.push("```")
-			if (structure.stylingConfig) {
-				lines.push(`${structure.stylingConfig}              # styling/token configuration`)
-			}
-			lines.push(`${structure.stylesDir}/`)
-			lines.push(
-				`  ${basename(structure.tokensFile)}                    # design token definitions`,
-			)
-			lines.push(
-				`  ${basename(structure.globalsFile)}                   # global base styles (reset, body defaults)`,
-			)
-			lines.push(
-				`${structure.layoutDir}/                    # layout components (created in later steps)`,
-			)
-			lines.push(
-				`${structure.uiDir}/                        # UI components (created in later steps)`,
-			)
-			lines.push(`${structure.utilsDir}/`)
-			lines.push(
-				`  ${basename(structure.utilFiles.cn)}                       # className merge utility`,
-			)
-			lines.push("```")
-			break
+	const builder = stepBuilders[stepType]
+	if (!builder) {
+		lines.push("```")
+		lines.push("# (no structure guide for this step)")
+		lines.push("```")
+		lines.push("")
+		return lines.join("\n")
+	}
 
-		case "design-tokens":
-			lines.push("```")
-			lines.push(`${structure.tokensFile}                    # all token definitions go here`)
-			if (structure.stylingConfig) {
-				lines.push(`${structure.stylingConfig}              # extend theme with token values`)
-			}
-			lines.push("```")
-			break
+	// Special cases with non-code-block content
+	if (stepType === "responsive") {
+		lines.push("Modify existing files. Only create new files if a responsive utility is needed:")
+	} else if (stepType === "interactions") {
+		lines.push("Modify existing files. Create utility files for shared animation logic if needed:")
+	} else {
+		lines.push("```")
+	}
 
-		case "typography":
-			lines.push("```")
-			lines.push(
-				`${structure.tokensFile}                    # add typography tokens (extend existing)`,
-			)
-			if (structure.stylingConfig) {
-				lines.push(`${structure.stylingConfig}              # extend theme with typography values`)
-			}
-			lines.push("```")
-			break
+	lines.push(...builder(structure))
 
-		case "layout-shell":
-			lines.push("```")
-			lines.push(`${structure.rootLayout}                    # root layout / app shell`)
-			lines.push(`${structure.layoutDir}/`)
-			lines.push(`  ${basename(structure.layoutFiles.header)}                  # site header`)
-			lines.push(`  ${basename(structure.layoutFiles.footer)}                  # site footer`)
-			lines.push(
-				`  ${basename(structure.layoutFiles.navigation)}              # navigation component`,
-			)
-			lines.push(
-				`  ${basename(structure.layoutFiles.pageContainer)}           # page container (max-width, padding)`,
-			)
-			lines.push("```")
-			break
+	if (stepType !== "responsive" && stepType !== "interactions") {
+		lines.push("```")
+	}
 
-		case "showcase-pages":
-			lines.push("```")
-			lines.push(`${structure.pageFiles.home}                # home showcase page`)
-			lines.push(`${structure.pageFiles.about}               # about showcase page`)
-			lines.push(`${structure.uiDir}/`)
-			lines.push(`  Button${structure.componentExt}                      # button component`)
-			lines.push(`  Card${structure.componentExt}                        # card component`)
-			lines.push(
-				`  Section${structure.componentExt}                     # section container component`,
-			)
-			lines.push("```")
-			lines.push("")
-			lines.push(`**Component styling**: ${structure.styleFiles.componentStylePattern}`)
-			lines.push("")
-			lines.push("Create small, focused UI components in the `ui/` directory as needed.")
-			lines.push("Each component: one file, PascalCase name, single responsibility.")
-			break
-
-		case "responsive":
-			lines.push("Modify existing files. Only create new files if a responsive utility is needed:")
-			lines.push("")
-			lines.push("```")
-			lines.push(`${structure.rootLayout}                    # responsive shell adjustments`)
-			lines.push(`${structure.layoutFiles.header}            # responsive header / mobile nav`)
-			lines.push(`${structure.layoutFiles.navigation}        # responsive navigation behavior`)
-			lines.push(`${structure.pageFiles.home}                # responsive home page`)
-			lines.push(`${structure.pageFiles.about}               # responsive about page`)
-			lines.push("```")
-			break
-
-		case "interactions":
-			lines.push(
-				"Modify existing files. Create utility files for shared animation logic if needed:",
-			)
-			lines.push("")
-			lines.push("```")
-			lines.push(`${structure.pageFiles.home}                # page transitions, scroll effects`)
-			lines.push(`${structure.pageFiles.about}               # page transitions`)
-			lines.push(
-				`${structure.uiDir}/Button${structure.componentExt}             # hover/active/focus states`,
-			)
-			lines.push(`${structure.uiDir}/Card${structure.componentExt}               # hover effects`)
-			lines.push(
-				`${structure.styleFiles.animations}         # shared keyframes / animation definitions`,
-			)
-			lines.push(
-				`${structure.utilFiles.animations}           # animation utility functions (optional)`,
-			)
-			lines.push("```")
-			break
+	if (stepType === "showcase-pages") {
+		lines.push("")
+		lines.push(`**Component styling**: ${structure.styleFiles.componentStylePattern}`)
+		lines.push("")
+		lines.push("Create small, focused UI components in the `ui/` directory as needed.")
+		lines.push("Each component: one file, PascalCase name, single responsibility.")
 	}
 
 	lines.push("")

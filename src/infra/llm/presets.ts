@@ -1,4 +1,6 @@
 import type { LLMProvider } from "@defs/config.js"
+import type { PresetName } from "@domain/constants/target-presets.js"
+export type { PresetName } from "@domain/constants/target-presets.js"
 
 // ── Task Presets ────────────────────────────────────────────
 
@@ -20,9 +22,7 @@ export const TASK_PRESETS = {
 	interactionAnalyzer: { temperature: 0.2, maxOutputTokens: 4096, baseTimeoutMs: 120_000 },
 	essenceSynthesizer: { temperature: 0.3, maxOutputTokens: 8192, baseTimeoutMs: 180_000 },
 	analysisPlanner: { temperature: 0.1, maxOutputTokens: 2000, baseTimeoutMs: 30_000 },
-} as const satisfies Record<string, TaskPreset>
-
-export type PresetName = keyof typeof TASK_PRESETS
+} as const satisfies Record<PresetName, TaskPreset>
 
 // ── Provider Profiles ───────────────────────────────────────
 

@@ -1,9 +1,9 @@
 import type { PromptTemplateContext } from "@defs/templates.js"
 import {
 	buildBorderRadiusReference,
-	buildColorReferenceCompact,
+	buildColorReference,
 	buildComponentCatalogReference,
-	buildLayoutReferenceCompact,
+	buildLayoutReference,
 	buildShadowsReference,
 	buildSpacingReference,
 	buildTypographyReference,
@@ -112,12 +112,12 @@ function buildFullDesignReference(
 	components: import("@defs/analysis.js").ComponentCatalog | null,
 ): string {
 	const parts = [
-		tokens ? buildColorReferenceCompact(tokens) : "",
+		tokens ? buildColorReference(tokens, { compact: true }) : "",
 		tokens ? buildSpacingReference(tokens) : "",
 		tokens ? buildBorderRadiusReference(tokens) : "",
 		tokens ? buildShadowsReference(tokens) : "",
 		buildTypographyReference(typo),
-		buildLayoutReferenceCompact(layout),
+		buildLayoutReference(layout, { compact: true }),
 		buildComponentCatalogReference(components),
 	].filter(Boolean)
 

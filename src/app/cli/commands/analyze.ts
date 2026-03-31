@@ -1,3 +1,4 @@
+import { detectMonorepo } from "@app/pipeline/monorepo-utils.js"
 import { runAnalysisPipeline, runPipeline } from "@app/pipeline/orchestrator.js"
 import { UserError } from "@defs/errors.js"
 import type { FileTreeNode } from "@defs/extraction.js"
@@ -6,11 +7,6 @@ import { loadDittoConfig } from "@infra/config/loader.js"
 import { logger, setDebugMode } from "@infra/logger.js"
 import { runExtraction } from "@infra/source/index.js"
 import { resolveRepo } from "@infra/source/repo-resolver.js"
-import {
-	detectApps,
-	findMonorepoRoot,
-	resolveWorkspaceDeps,
-} from "@infra/source/workspace-detector.js"
 import { defineCommand } from "citty"
 import { formatResult } from "../formatter.js"
 
@@ -154,25 +150,17 @@ async function runAnalyzeDryRun(source: string, includePaths?: string[]): Promis
 
 	try {
 		// Detect monorepo
-		const monorepoRoot = await findMonorepoRoot(resolved.localPath)
-		const isMonorepo = !!monorepoRoot
-
-		let monorepoInfo: { rootPath: string; targetRelative: string; depPaths?: string[] } | undefined
-		if (isMonorepo && monorepoRoot) {
-			const { relative } = await import("node:path")
-			const targetRelative = relative(monorepoRoot, resolved.localPath)
-			const depPaths = await resolveWorkspaceDeps(resolved.localPath, monorepoRoot)
-
-			monorepoInfo = { rootPath: monorepoRoot, targetRelative, depPaths }
-			logger.info(`Monorepo detected: root=${monorepoRoot}`)
-			logger.info(`Target: ${targetRelative}`)
-			if (depPaths.length > 0) {
-				logger.info(`Workspace deps: ${depPaths.join(", ")}`)
-			}
-		}
+		const { info: monorepoInfo } = await detectMonorepo(resolved.localPath)
+		const monorepoParams = monorepoInfo
+			? {
+					rootPath: monorepoInfo.rootPath,
+					targetRelative: monorepoInfo.targetRelative,
+					depPaths: monorepoInfo.depPaths,
+				}
+			: undefined
 
 		// Run extraction only (Phase 1) — no LLM calls
-		const phase1Result = await runExtraction(resolved.localPath, monorepoInfo, includePaths)
+		const phase1Result = await runExtraction(resolved.localPath, monorepoParams, includePaths)
 
 		if (!phase1Result.data) {
 			logger.error("Extraction failed:")

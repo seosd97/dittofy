@@ -1,10 +1,6 @@
 import type { FileTreeNode } from "@defs/extraction.js"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import { FileSelectionError, flattenTreePaths, resolveFiles } from "../file-resolver.js"
-
-vi.mock("@infra/logger.js", () => ({
-	logger: { info: vi.fn(), warn: vi.fn(), debug: vi.fn() },
-}))
 
 const tree: FileTreeNode[] = [
 	{
@@ -46,30 +42,30 @@ describe("flattenTreePaths", () => {
 describe("resolveFiles", () => {
 	it("exact match resolves directly", () => {
 		const plan = makePlan({ designTokens: ["src/theme.css.ts", "tailwind.config.ts"] })
-		const result = resolveFiles(plan, tree)
-		expect(result.matchRate).toBe(1)
-		expect(plan.fileSelection.designTokens).toEqual(["src/theme.css.ts", "tailwind.config.ts"])
+		const { matchRate, plan: resolved } = resolveFiles(plan, tree)
+		expect(matchRate).toBe(1)
+		expect(resolved.fileSelection.designTokens).toEqual(["src/theme.css.ts", "tailwind.config.ts"])
 	})
 
 	it("suffix match resolves partial paths", () => {
 		const plan = makePlan({ designTokens: ["Button.tsx"] })
-		const result = resolveFiles(plan, tree)
-		expect(result.matchRate).toBe(1)
-		expect(plan.fileSelection.designTokens).toEqual(["src/Button.tsx"])
+		const { matchRate, plan: resolved } = resolveFiles(plan, tree)
+		expect(matchRate).toBe(1)
+		expect(resolved.fileSelection.designTokens).toEqual(["src/Button.tsx"])
 	})
 
 	it("filename-only match resolves unique filenames", () => {
 		const plan = makePlan({ designTokens: ["tokens.ts"] })
-		const result = resolveFiles(plan, tree)
-		expect(result.matchRate).toBe(1)
-		expect(plan.fileSelection.designTokens).toEqual(["src/styles/tokens.ts"])
+		const { matchRate, plan: resolved } = resolveFiles(plan, tree)
+		expect(matchRate).toBe(1)
+		expect(resolved.fileSelection.designTokens).toEqual(["src/styles/tokens.ts"])
 	})
 
 	it("unresolvable paths are filtered out", () => {
 		const plan = makePlan({ designTokens: ["src/theme.css.ts", "nonexistent.ts"] })
-		const result = resolveFiles(plan, tree)
-		expect(result.matchRate).toBe(0.5)
-		expect(plan.fileSelection.designTokens).toEqual(["src/theme.css.ts"])
+		const { matchRate, plan: resolved } = resolveFiles(plan, tree)
+		expect(matchRate).toBe(0.5)
+		expect(resolved.fileSelection.designTokens).toEqual(["src/theme.css.ts"])
 	})
 
 	it("throws FileSelectionError when match rate < 50%", () => {
@@ -91,5 +87,12 @@ describe("resolveFiles", () => {
 	it("empty file selection returns matchRate 1", () => {
 		const plan = makePlan({})
 		expect(resolveFiles(plan, tree).matchRate).toBe(1)
+	})
+
+	it("does not mutate input plan", () => {
+		const plan = makePlan({ designTokens: ["src/theme.css.ts"] })
+		const originalSelection = { ...plan.fileSelection }
+		resolveFiles(plan, tree)
+		expect(plan.fileSelection).toEqual(originalSelection)
 	})
 })

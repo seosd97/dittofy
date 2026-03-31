@@ -7,13 +7,13 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createXai } from "@ai-sdk/xai"
 import type { DittoConfig, LLMProvider } from "@defs/config.js"
 import { UserError } from "@defs/errors.js"
+import type { PresetName } from "@domain/constants/target-presets.js"
 import { formatProviderKeyHint } from "@infra/config/provider-env.js"
 import { isDebugMode, logger } from "@infra/logger.js"
 import { Output, generateText, zodSchema } from "ai"
 import type { LanguageModel, LanguageModelUsage } from "ai"
 import type { z } from "zod"
 import { LLMCeilingError, SchemaValidationError, TruncationError } from "./errors.js"
-import type { PresetName } from "./presets.js"
 import { PROVIDER_PROFILES, type ProviderProfile, resolveCallConfig } from "./presets.js"
 import { isNonRecoverableError, withRetry } from "./retry.js"
 
@@ -58,8 +58,8 @@ export class LLMClient implements ILLMClient {
 		if (isDebugMode()) {
 			logger.debug(`LLM request [${options.schemaName}]:`, {
 				preset: options.preset,
-				systemPrompt: truncate(options.system, 200),
-				prompt: truncate(options.prompt, 300),
+				systemPrompt: maskSensitive(truncate(options.system, 200)),
+				prompt: maskSensitive(truncate(options.prompt, 300)),
 			})
 		}
 
@@ -98,7 +98,7 @@ export class LLMClient implements ILLMClient {
 						`LLM call [${options.schemaName}]: ${result.usage.inputTokens} prompt + ${result.usage.outputTokens} completion tokens`,
 					)
 					logger.debug(`LLM response [${options.schemaName}]:`, {
-						data: truncate(JSON.stringify(result.object), 500),
+						data: maskSensitive(truncate(JSON.stringify(result.object), 500)),
 					})
 				}
 
@@ -395,17 +395,23 @@ ${schemaText}`
 // ── Helpers ─────────────────────────────────────────────────
 
 /**
- * Recursively convert null values to [] where the surrounding context
- * suggests an array was expected (sibling keys have array values).
- * Handles GLM models returning null for empty arrays.
+ * Recursively convert null values to [] only when at least one sibling
+ * is an array. This handles GLM models returning null for empty arrays
+ * without converting legitimate null values (e.g. nullable strings).
  */
 function normalizeNullArrays(obj: unknown): unknown {
 	if (obj === null || obj === undefined) return obj
 	if (Array.isArray(obj)) return obj.map(normalizeNullArrays)
 	if (typeof obj === "object") {
+		const entries = Object.entries(obj as Record<string, unknown>)
+		const hasArraySibling = entries.some(([, v]) => Array.isArray(v))
 		const result: Record<string, unknown> = {}
-		for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-			result[key] = value === null ? [] : normalizeNullArrays(value)
+		for (const [key, value] of entries) {
+			if (value === null && hasArraySibling) {
+				result[key] = []
+			} else {
+				result[key] = normalizeNullArrays(value)
+			}
 		}
 		return result
 	}
@@ -519,6 +525,27 @@ export function tryExtractJSON<T extends z.ZodType>(text: string, schema: T): z.
 	}
 
 	return null
+}
+
+// ── Sensitive data masking ──────────────────────────────────
+
+const SENSITIVE_PATTERNS = [
+	/sk-[a-zA-Z0-9]{16,}/g,
+	/bearer\s+[a-zA-Z0-9._\-]{16,}/gi,
+	/key[_\-]?(?:[a-zA-Z0-9_\-]*_)?[a-zA-Z0-9]{16,}/gi,
+	/api[_\-]?key["\s:=]+["']?[a-zA-Z0-9]{16,}/gi,
+	/token["\s:=]+["']?[a-zA-Z0-9._\-]{16,}/gi,
+]
+
+function maskSensitive(text: string): string {
+	let masked = text
+	for (const pattern of SENSITIVE_PATTERNS) {
+		masked = masked.replace(pattern, (match) => {
+			const visible = match.slice(0, Math.min(match.indexOf("-") > 0 ? match.indexOf("-") + 4 : 7))
+			return `${visible}***`
+		})
+	}
+	return masked
 }
 
 function truncate(str: string, maxLen: number): string {
