@@ -1,5 +1,5 @@
+import type { PresetName } from "@domain/constants/target-presets.js"
 import type { SystemPromptConfig } from "@domain/llm-prompts/index.js"
-import type { PresetName } from "@infra/llm/presets.js"
 import type { z } from "zod"
 import type { AnalysisResult } from "./analysis.js"
 import type { AspectName, AspectTypeMap } from "./aspect-map.js"
@@ -32,6 +32,17 @@ export interface DocDeclaration {
 	renderDoc?: (ctx: import("@defs/templates.js").TemplateContext) => string | null
 }
 
+/** Type-safe chunked analysis configuration */
+export interface ChunkedAnalysisConfig<K extends AspectName, ChunkType = unknown> {
+	chunkPreset: PresetName
+	chunkSchema: z.ZodType<ChunkType>
+	chunkSchemaName: string
+	batchSize: number
+	extractChunks: (codeContext: string) => ChunkTarget[]
+	buildChunkPrompt: (basePrompt: string, chunk: ChunkTarget) => string
+	merge: (chunks: ChunkType[]) => AspectTypeMap[K]
+}
+
 /** Aspect Descriptor — 각 디자인 측면의 자기완결적 기술 */
 export interface AspectDescriptor<K extends AspectName> {
 	name: K
@@ -45,15 +56,7 @@ export interface AspectDescriptor<K extends AspectName> {
 		schemaDescription: string
 		promptConfig: SystemPromptConfig
 		/** Optional: 큰 스키마를 배치 단위로 분할하여 LLM 호출 후 병합 */
-		chunkedAnalysis?: {
-			chunkPreset: PresetName
-			chunkSchema: z.ZodType
-			chunkSchemaName: string
-			batchSize: number
-			extractChunks: (codeContext: string) => ChunkTarget[]
-			buildChunkPrompt: (basePrompt: string, chunk: ChunkTarget) => string
-			merge: (chunks: unknown[]) => AspectTypeMap[K]
-		}
+		chunkedAnalysis?: ChunkedAnalysisConfig<K>
 	}
 
 	/** Step Planning 설정 */

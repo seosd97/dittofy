@@ -14,6 +14,18 @@ export const FE_INDICATORS = [
 	"@angular/core",
 ] as const
 
+/** Minimal package.json shape for workspace detection */
+interface PackageJson {
+	name?: string
+	workspaces?: unknown
+	scripts?: Record<string, unknown>
+	dependencies?: Record<string, unknown>
+	devDependencies?: Record<string, unknown>
+}
+
+/** Maximum directory walk-up iterations to prevent infinite loops */
+const MAX_WALKUP = 20
+
 /**
  * Walk up from targetPath to find monorepo root.
  * Root = directory with package.json containing "workspaces" field or pnpm-workspace.yaml.
@@ -23,10 +35,11 @@ export async function findMonorepoRoot(targetPath: string): Promise<string | nul
 	let current = resolve(targetPath)
 	const systemRoot = resolve("/")
 
-	while (current !== systemRoot) {
+	let iterations = 0
+	while (current !== systemRoot && iterations < MAX_WALKUP) {
+		iterations++
 		const parent = dirname(current)
 		if (parent === current) break
-		// Don't check targetPath itself — only parents
 
 		try {
 			const pkgContent = await readFile(resolve(parent, "package.json"), "utf-8")
@@ -113,11 +126,10 @@ export async function detectApps(rootPath: string): Promise<string[]> {
 	return apps
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: package.json has dynamic structure
-async function readPackageJson(dirPath: string): Promise<Record<string, any> | null> {
+async function readPackageJson(dirPath: string): Promise<PackageJson | null> {
 	try {
 		const content = await readFile(resolve(dirPath, "package.json"), "utf-8")
-		return JSON.parse(content)
+		return JSON.parse(content) as PackageJson
 	} catch {
 		return null
 	}

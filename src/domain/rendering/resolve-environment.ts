@@ -1,6 +1,5 @@
 import type { TechStack } from "@defs/analysis.js"
 import { getTargetPreset } from "@domain/constants/target-presets.js"
-import { logger } from "@infra/logger.js"
 import { type ProjectStructure, resolveProjectStructure } from "./resolve-structure.js"
 import { resolveStylingProfile } from "./styling-profiles.js"
 
@@ -32,12 +31,18 @@ export interface EnvironmentProfile {
 export function resolveEnvironment(
 	techStack: TechStack,
 	targetOverride?: string,
+	log?: { info: (msg: string) => void; warn: (msg: string) => void },
 ): EnvironmentProfile {
 	// If target override is provided, use the preset
 	if (targetOverride) {
 		const preset = getTargetPreset(targetOverride)
 		if (preset) {
 			const stylingProfile = resolveStylingProfile(preset.styling)
+			const structure = resolveProjectStructure({
+				framework: preset.framework,
+				language: preset.language,
+				styling: preset.styling,
+			})
 
 			const env: EnvironmentProfile = {
 				mode: "greenfield",
@@ -48,17 +53,15 @@ export function resolveEnvironment(
 				uiLibrary: preset.uiLibrary,
 				tokenStrategy: stylingProfile.tokenStrategy,
 				summary: `Target: ${preset.id} (${preset.framework} + ${preset.styling})`,
-				structure: undefined as unknown as ProjectStructure,
+				structure,
 			}
 
-			env.structure = resolveProjectStructure(env)
-
-			logger.info(`Environment: greenfield — ${env.summary}`)
+			log?.info(`Environment: greenfield — ${env.summary}`)
 
 			return env
 		}
 		// Unknown target — log warning and fall through to auto-detection
-		logger.warn(`Unknown target preset: ${targetOverride}, falling back to auto-detection`)
+		log?.warn(`Unknown target preset: ${targetOverride}, falling back to auto-detection`)
 	}
 
 	const framework = techStack.framework.value
@@ -70,18 +73,19 @@ export function resolveEnvironment(
 	const hasConfidentFramework = techStack.framework.confidence !== "low" && framework !== "Unknown"
 
 	if (!hasConfidentFramework) {
-		logger.warn("Framework detection uncertain — using greenfield mode")
+		log?.warn("Framework detection uncertain — using greenfield mode")
 	}
 
 	const mode = hasConfidentFramework ? "existing-project" : "greenfield"
 	const profile = resolveStylingProfile(styling)
 
 	if (profile.id === "css") {
-		logger.warn("Styling approach not recognized, using generic CSS strategy")
+		log?.warn("Styling approach not recognized, using generic CSS strategy")
 	}
 	const tokenStrategy = profile.tokenStrategy
 
 	const summary = buildSummaryLine(mode, framework, language, styling, buildTool)
+	const structure = resolveProjectStructure({ framework, language, styling })
 
 	const env: EnvironmentProfile = {
 		mode,
@@ -92,12 +96,10 @@ export function resolveEnvironment(
 		uiLibrary,
 		tokenStrategy,
 		summary,
-		structure: undefined as unknown as ProjectStructure,
+		structure,
 	}
 
-	env.structure = resolveProjectStructure(env)
-
-	logger.info(`Environment: ${mode} — ${summary}`)
+	log?.info(`Environment: ${mode} — ${summary}`)
 
 	return env
 }

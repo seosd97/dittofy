@@ -37,3 +37,5 @@ export const interactionPatternsSchema = z.object({
 	consistency: consistencyMetricsSchema.nullable().optional(),
 	designNotes: designNotesSchema,
 })
+
+export type InteractionPatterns = z.infer<typeof interactionPatternsSchema>

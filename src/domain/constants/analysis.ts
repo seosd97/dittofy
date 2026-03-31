@@ -13,3 +13,12 @@ export const COMPLEXITY_THRESHOLDS = {
 	high: 40,
 	medium: 20,
 } as const
+
+/** Minimum file resolution match rate before fast-failing */
+export const MIN_FILE_MATCH_RATE = 0.5
+
+/** Tier thresholds based on aspect count */
+export const TIER_THRESHOLDS = {
+	minimal: 3,
+	full: 7,
+} as const

@@ -1,6 +1,6 @@
 import type { AspectName } from "@defs/aspect-map.js"
 import type { FileTreeNode } from "@defs/extraction.js"
-import { logger } from "@infra/logger.js"
+import { MIN_FILE_MATCH_RATE } from "@domain/constants/analysis.js"
 import type { AnalysisPlan } from "./plan-parser.js"
 
 export class FileSelectionError extends Error {
@@ -27,17 +27,19 @@ export class FileSelectionError extends Error {
  * 2. Calculate match quality (resolved / total)
  * 3. If <50% resolved, throw FileSelectionError (fast-fail)
  *
- * Mutates plan.fileSelection in place with resolved paths.
+ * Returns a new plan with resolved fileSelection (does not mutate input).
  */
 export function resolveFiles(
 	plan: AnalysisPlan,
 	fileTree: FileTreeNode[],
 	targetRelative = "",
-): { matchRate: number } {
+	log?: { debug: (msg: string) => void; warn: (msg: string) => void; info: (msg: string) => void },
+): { matchRate: number; plan: AnalysisPlan } {
 	const treeFiles = flattenTreePaths(fileTree)
 	const treeFileArr = [...treeFiles]
 	let totalSelected = 0
 	let totalResolved = 0
+	const resolvedSelection: AnalysisPlan["fileSelection"] = {}
 
 	// Stage 1: Resolve planner paths via 4-stage matching
 	for (const [aspect, files] of Object.entries(plan.fileSelection)) {
@@ -48,39 +50,41 @@ export function resolveFiles(
 			const match = resolveFilePath(f, treeFiles, treeFileArr, targetRelative)
 			if (match) {
 				resolved.push(match)
-				logger.debug(`  ✓ ${f}${match !== f ? ` → ${match}` : ""}`)
+				log?.debug(`  ✓ ${f}${match !== f ? ` → ${match}` : ""}`)
 			} else {
-				logger.warn(`  ✗ ${f} (not found in tree)`)
+				log?.warn(`  ✗ ${f} (not found in tree)`)
 			}
 		}
 
 		if (resolved.length < files.length) {
-			logger.warn(`${aspect}: ${files.length - resolved.length}/${files.length} files not found`)
+			log?.warn(`${aspect}: ${files.length - resolved.length}/${files.length} files not found`)
 		}
 
-		plan.fileSelection[aspect as AspectName] = resolved
+		resolvedSelection[aspect as AspectName] = resolved
 		totalSelected += files.length
 		totalResolved += resolved.length
 	}
 
+	const updatedPlan = { ...plan, fileSelection: { ...plan.fileSelection, ...resolvedSelection } }
+
 	if (totalSelected === 0) {
-		return { matchRate: 1 }
+		return { matchRate: 1, plan: updatedPlan }
 	}
 
 	const matchRate = totalResolved / totalSelected
-	logger.info(
+	log?.info(
 		`File selection: ${totalResolved}/${totalSelected} resolved (${(matchRate * 100).toFixed(0)}%)`,
 	)
 
 	// Stage 2: If match quality too low, fail fast — static fallback is unreliable
-	if (matchRate < 0.5) {
+	if (matchRate < MIN_FILE_MATCH_RATE) {
 		throw new FileSelectionError(
 			`File selection quality too low: ${totalResolved}/${totalSelected} resolved (${(matchRate * 100).toFixed(0)}%). The analysis planner could not match most files to the project structure. This usually means the project layout is unusual or the planner hallucinated paths.`,
 			{ matchRate, totalSelected, totalResolved },
 		)
 	}
 
-	return { matchRate }
+	return { matchRate, plan: updatedPlan }
 }
 
 /**

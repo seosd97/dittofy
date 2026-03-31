@@ -2,6 +2,7 @@ import { access, readFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import type { TechStack } from "@defs/analysis.js"
 import type {
+	ExtractionOutput,
 	ExtractionResult,
 	FileTreeNode,
 	MonorepoContext,
@@ -20,11 +21,7 @@ export {
 	resolveWorkspaceDeps,
 } from "./workspace-detector.js"
 
-export interface ExtractionOutput {
-	extraction: ExtractionResult
-	techStack: TechStack
-	monorepo: MonorepoContext
-}
+export type { ExtractionOutput } from "@defs/extraction.js"
 
 export async function runExtraction(
 	repoPath: string,

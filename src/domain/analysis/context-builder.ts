@@ -1,5 +1,6 @@
 import type { CodeChunk, FileTreeNode } from "@defs/extraction.js"
 import { CONTEXT_BUDGET, estimateTokens } from "@domain/constants/token-estimation.js"
+import { formatSize } from "@domain/rendering/tree-renderer.js"
 
 export interface ContextBuildResult {
 	codeContext: string
@@ -61,15 +62,10 @@ function buildFileStructureSummary(tree: FileTreeNode[], prefix = "", depth = 0)
 				lines.push(buildFileStructureSummary(node.children, `${prefix}  `, depth + 1))
 			}
 		} else {
-			const sizeLabel = node.size != null ? ` (${formatFileSize(node.size)})` : ""
+			const sizeLabel = node.size != null ? ` (${formatSize(node.size)})` : ""
 			lines.push(`${prefix}- ${node.path}${sizeLabel}`)
 		}
 	}
 
 	return lines.filter(Boolean).join("\n")
-}
-
-function formatFileSize(bytes: number): string {
-	if (bytes < 1024) return `${bytes}B`
-	return `${(bytes / 1024).toFixed(1)}KB`
 }

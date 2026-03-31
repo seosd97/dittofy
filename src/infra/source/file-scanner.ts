@@ -1,8 +1,8 @@
 import { lstat, readdir } from "node:fs/promises"
 import { extname, join } from "node:path"
 import type { FileTreeNode } from "@defs/extraction.js"
+import { EXTRACTION_LIMITS, TREE_IGNORE_DIRS } from "@domain/constants/extraction.js"
 import { logger } from "@infra/logger.js"
-import { EXTRACTION_LIMITS, TREE_IGNORE_DIRS } from "./extraction-constants.js"
 
 export interface ScanResult {
 	fileTree: FileTreeNode[]

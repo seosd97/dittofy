@@ -37,3 +37,5 @@ export const responsiveStrategySchema = z.object({
 	consistency: consistencyMetricsSchema.nullable().optional(),
 	designNotes: designNotesSchema,
 })
+
+export type ResponsiveStrategy = z.infer<typeof responsiveStrategySchema>

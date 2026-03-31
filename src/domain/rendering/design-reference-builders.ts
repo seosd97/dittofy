@@ -9,31 +9,14 @@ import type {
 
 // ── Color Reference ──────────────────────────────────────────────
 
-export function buildColorReference(tokens: DesignTokens | null): string {
+export function buildColorReference(
+	tokens: DesignTokens | null,
+	options?: { compact?: boolean },
+): string {
 	if (!tokens?.colorGroups || tokens.colorGroups.length === 0) return ""
 
 	const sections: string[] = []
-	sections.push("### Colors (by group)")
-	for (const group of tokens.colorGroups) {
-		const level = group.level ? ` (${group.level})` : ""
-		sections.push(`\n**${group.group}${level}**:`)
-		sections.push("| Name | Value | Usage |")
-		sections.push("|------|-------|-------|")
-		for (const t of group.tokens) {
-			sections.push(`| ${t.name} | \`${t.value}\` | ${t.usage} |`)
-		}
-	}
-	return sections.join("\n")
-}
-
-/**
- * Compact color reference (no "by group" subtitle) used by pages prompt.
- */
-export function buildColorReferenceCompact(tokens: DesignTokens | null): string {
-	if (!tokens?.colorGroups || tokens.colorGroups.length === 0) return ""
-
-	const sections: string[] = []
-	sections.push("### Colors")
+	sections.push(options?.compact ? "### Colors" : "### Colors (by group)")
 	for (const group of tokens.colorGroups) {
 		const level = group.level ? ` (${group.level})` : ""
 		sections.push(`\n**${group.group}${level}**:`)
@@ -239,10 +222,37 @@ export function buildTypographyReference(typo: TypographySystem | null): string 
 
 // ── Layout Reference ────────────────────────────────────────────
 
-export function buildLayoutReference(layout: LayoutSystem | null): string {
+export function buildLayoutReference(
+	layout: LayoutSystem | null,
+	options?: { compact?: boolean },
+): string {
 	if (!layout) return ""
 
 	const sections: string[] = []
+
+	if (options?.compact) {
+		sections.push(`\n### Layout\n**Approach**: ${layout.approach}`)
+
+		if (layout.containers.length > 0) {
+			for (const c of layout.containers) {
+				const maxW = c.maxWidth ? `max-width: \`${c.maxWidth}\`` : ""
+				const pad = c.padding ? `padding: \`${c.padding}\`` : ""
+				const dims = [maxW, pad].filter(Boolean).join(", ")
+				sections.push(`- **${c.name}**: ${dims}`)
+			}
+		}
+
+		if (layout.grids.length > 0) {
+			for (const g of layout.grids) {
+				const cols = g.columns ? `${g.columns} columns` : ""
+				const gap = g.gap ? `gap: \`${g.gap}\`` : ""
+				const details = [g.type, cols, gap].filter(Boolean).join(", ")
+				sections.push(`- Grid: ${details}`)
+			}
+		}
+
+		return sections.join("\n")
+	}
 
 	// Layout Approach
 	sections.push(`### Layout Approach\n${layout.approach}`)
@@ -293,37 +303,6 @@ export function buildLayoutReference(layout: LayoutSystem | null): string {
 		sections.push("\n### Spacing Rhythm")
 		for (const sr of layout.spacingRhythm) {
 			sections.push(`- **${sr.name}** (\`${sr.value}\`): ${sr.usage}`)
-		}
-	}
-
-	return sections.join("\n")
-}
-
-/**
- * Compact layout reference (no subtitles for Containers/Grid Systems) used by pages prompt.
- */
-export function buildLayoutReferenceCompact(layout: LayoutSystem | null): string {
-	if (!layout) return ""
-
-	const sections: string[] = []
-
-	sections.push(`\n### Layout\n**Approach**: ${layout.approach}`)
-
-	if (layout.containers.length > 0) {
-		for (const c of layout.containers) {
-			const maxW = c.maxWidth ? `max-width: \`${c.maxWidth}\`` : ""
-			const pad = c.padding ? `padding: \`${c.padding}\`` : ""
-			const dims = [maxW, pad].filter(Boolean).join(", ")
-			sections.push(`- **${c.name}**: ${dims}`)
-		}
-	}
-
-	if (layout.grids.length > 0) {
-		for (const g of layout.grids) {
-			const cols = g.columns ? `${g.columns} columns` : ""
-			const gap = g.gap ? `gap: \`${g.gap}\`` : ""
-			const details = [g.type, cols, gap].filter(Boolean).join(", ")
-			sections.push(`- Grid: ${details}`)
 		}
 	}
 

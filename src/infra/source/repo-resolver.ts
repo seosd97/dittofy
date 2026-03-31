@@ -57,9 +57,17 @@ export async function resolveRepo(source: string, packageOption?: string): Promi
 	return repo
 }
 
+const GITHUB_URL_PATTERN = /^https?:\/\/github\.com\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+/
+const GITHUB_SHORT_PATTERN = /^github:[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+/
+
 function classifyInput(source: string): "local" | "github" {
-	if (source.startsWith("https://github.com/") || source.startsWith("github:")) {
+	if (GITHUB_URL_PATTERN.test(source) || GITHUB_SHORT_PATTERN.test(source)) {
 		return "github"
+	}
+	if (source.startsWith("https://github.com/") || source.startsWith("github:")) {
+		throw new UserError(
+			`Invalid GitHub source format: "${source}". Expected "github:owner/repo" or "https://github.com/owner/repo".`,
+		)
 	}
 	return "local"
 }

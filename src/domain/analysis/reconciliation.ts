@@ -1,5 +1,4 @@
 import type { AnalysisResultMap } from "@defs/aspect-map.js"
-import { logger } from "@infra/logger.js"
 
 export interface ReconciliationConflict {
 	field: string
@@ -18,7 +17,10 @@ export interface ReconciliationReport {
  * Token values always take precedence — conflicts are passed to essence
  * synthesis as context so the LLM can acknowledge them in the narrative.
  */
-export function reconcileAnalysis(results: AnalysisResultMap): ReconciliationReport {
+export function reconcileAnalysis(
+	results: AnalysisResultMap,
+	log?: { info: (msg: string) => void },
+): ReconciliationReport {
 	const conflicts: ReconciliationConflict[] = []
 
 	const tokens = results.designTokens
@@ -47,9 +49,7 @@ export function reconcileAnalysis(results: AnalysisResultMap): ReconciliationRep
 	}
 
 	if (conflicts.length > 0) {
-		logger.info(
-			`Reconciliation: ${conflicts.length} conflicts found (token values take precedence)`,
-		)
+		log?.info(`Reconciliation: ${conflicts.length} conflicts found (token values take precedence)`)
 	}
 
 	return { conflicts }

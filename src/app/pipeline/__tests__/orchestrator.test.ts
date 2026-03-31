@@ -812,7 +812,7 @@ describe("orchestrator", () => {
 
 	describe("validateAnalysisConfig", () => {
 		it("throws UserError when API key is missing for openai", async () => {
-			const { validateAnalysisConfig } = await import("@app/pipeline/orchestrator.js")
+			const { validateAnalysisConfig } = await import("@app/pipeline/validation.js")
 
 			const config = createMockConfig()
 			config.apiKeys = {}
@@ -822,7 +822,7 @@ describe("orchestrator", () => {
 		})
 
 		it("throws UserError when API key is missing for anthropic", async () => {
-			const { validateAnalysisConfig } = await import("@app/pipeline/orchestrator.js")
+			const { validateAnalysisConfig } = await import("@app/pipeline/validation.js")
 
 			const config = createMockConfig()
 			config.provider = "anthropic"
@@ -833,7 +833,7 @@ describe("orchestrator", () => {
 		})
 
 		it("throws UserError when API key is missing for zai", async () => {
-			const { validateAnalysisConfig } = await import("@app/pipeline/orchestrator.js")
+			const { validateAnalysisConfig } = await import("@app/pipeline/validation.js")
 
 			const config = createMockConfig()
 			config.provider = "zai"
@@ -844,7 +844,7 @@ describe("orchestrator", () => {
 		})
 
 		it("passes when API key exists", async () => {
-			const { validateAnalysisConfig } = await import("@app/pipeline/orchestrator.js")
+			const { validateAnalysisConfig } = await import("@app/pipeline/validation.js")
 
 			expect(() => validateAnalysisConfig(createMockConfig())).not.toThrow()
 		})
@@ -855,7 +855,7 @@ describe("orchestrator", () => {
 			const { access } = await import("node:fs/promises")
 			vi.mocked(access).mockRejectedValueOnce(new Error("ENOENT"))
 
-			const { validateGenerateInput } = await import("@app/pipeline/orchestrator.js")
+			const { validateGenerateInput } = await import("@app/pipeline/validation.js")
 
 			await expect(
 				validateGenerateInput({
@@ -870,7 +870,7 @@ describe("orchestrator", () => {
 			const { readFileContent } = await import("@infra/fs.js")
 			vi.mocked(readFileContent).mockResolvedValueOnce("not valid json{{{")
 
-			const { validateGenerateInput } = await import("@app/pipeline/orchestrator.js")
+			const { validateGenerateInput } = await import("@app/pipeline/validation.js")
 
 			await expect(
 				validateGenerateInput({
@@ -885,7 +885,7 @@ describe("orchestrator", () => {
 			const { readFileContent } = await import("@infra/fs.js")
 			vi.mocked(readFileContent).mockResolvedValueOnce(JSON.stringify({ essence: {} }))
 
-			const { validateGenerateInput } = await import("@app/pipeline/orchestrator.js")
+			const { validateGenerateInput } = await import("@app/pipeline/validation.js")
 
 			await expect(
 				validateGenerateInput({
@@ -900,7 +900,7 @@ describe("orchestrator", () => {
 			const { readFileContent } = await import("@infra/fs.js")
 			vi.mocked(readFileContent).mockResolvedValueOnce(JSON.stringify({ techStack: {} }))
 
-			const { validateGenerateInput } = await import("@app/pipeline/orchestrator.js")
+			const { validateGenerateInput } = await import("@app/pipeline/validation.js")
 
 			await expect(
 				validateGenerateInput({
@@ -912,7 +912,7 @@ describe("orchestrator", () => {
 		})
 
 		it("throws UserError for unknown target preset", async () => {
-			const { validateGenerateInput } = await import("@app/pipeline/orchestrator.js")
+			const { validateGenerateInput } = await import("@app/pipeline/validation.js")
 
 			await expect(
 				validateGenerateInput({
@@ -925,7 +925,7 @@ describe("orchestrator", () => {
 		})
 
 		it("passes with valid input and known target", async () => {
-			const { validateGenerateInput } = await import("@app/pipeline/orchestrator.js")
+			const { validateGenerateInput } = await import("@app/pipeline/validation.js")
 
 			const result = await validateGenerateInput({
 				analysisPath: "/tmp/analysis.json",

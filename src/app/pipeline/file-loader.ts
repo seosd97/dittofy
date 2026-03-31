@@ -2,6 +2,7 @@ import { readFile, stat } from "node:fs/promises"
 import { extname, resolve } from "node:path"
 import type { CodeChunk } from "@defs/extraction.js"
 import type { AnalysisPlan } from "@domain/analysis/plan-parser.js"
+import { EXTRACTION_LIMITS } from "@domain/constants/extraction.js"
 import { logger } from "@infra/logger.js"
 
 // Re-export pure functions from domain
@@ -44,7 +45,7 @@ export async function loadSelectedFiles(
 			fullPath = fullPath ?? resolve(rootPath, filePath)
 
 			const fileStat = await stat(fullPath)
-			if (fileStat.size > 100 * 1024) {
+			if (fileStat.size > EXTRACTION_LIMITS.maxFileSize) {
 				logger.debug(`Skipping large file: ${filePath}`)
 				continue
 			}

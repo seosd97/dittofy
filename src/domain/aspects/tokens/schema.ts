@@ -1,4 +1,8 @@
-import { consistencyMetricsSchema, designNotesSchema } from "@defs/schema-utils.js"
+import {
+	consistencyMetricsSchema,
+	designNotesSchema,
+	tokenValueSchema,
+} from "@defs/schema-utils.js"
 import { z } from "zod"
 
 const colorTokenSchema = z.object({
@@ -11,11 +15,6 @@ const spacingTokenSchema = z.object({
 	name: z.string(),
 	value: z.string(),
 	usage: z.string().describe("Where this spacing is commonly used"),
-})
-
-const tokenValueSchema = z.object({
-	name: z.string(),
-	value: z.string(),
 })
 
 const colorTokenGroupSchema = z.object({
@@ -56,3 +55,5 @@ export const designTokensSchema = z.object({
 	consistency: consistencyMetricsSchema.nullable().optional(),
 	designNotes: designNotesSchema,
 })
+
+export type DesignTokens = z.infer<typeof designTokensSchema>

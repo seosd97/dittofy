@@ -11,7 +11,7 @@ import type {
 	TechStack,
 	TypographySystem,
 } from "@defs/analysis.js"
-import { sanitizeTableCell, truncateValue } from "./format-utils.js"
+import { mdTable, sanitizeTableCell, truncateValue } from "./format-utils.js"
 
 export function renderAnalysisMarkdown(analysis: AnalysisResult): string {
 	const lines: string[] = []
@@ -124,15 +124,6 @@ function renderAspectSection<T>(
 function consistencyLine(c: ConsistencyMetrics | null | undefined): string {
 	if (!c) return ""
 	return `*Consistency: ${c.score}/100 (${c.maturity})*\n`
-}
-
-function mdTable(headers: string[], rows: string[][]): string {
-	const header = `| ${headers.map(sanitizeTableCell).join(" | ")} |`
-	const separator = `|${headers.map(() => "------").join("|")}|`
-	const body = rows.map(
-		(r) => `| ${r.map((cell) => truncateValue(sanitizeTableCell(cell))).join(" | ")} |`,
-	)
-	return [header, separator, ...body, ""].join("\n")
 }
 
 function renderNotes(

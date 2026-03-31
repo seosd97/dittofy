@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import type { DittoConfig } from "@defs/config.js"
 import { UserError } from "@defs/errors.js"
 import { ensureDittoHome, getSettingsPath } from "@infra/fs.js"
+import { logger } from "@infra/logger.js"
 import { loadConfig } from "c12"
 import { defaultConfig } from "./defaults.js"
 import { PROVIDER_ENV_VARS } from "./provider-env.js"
@@ -54,6 +55,7 @@ async function loadSettingsJson(): Promise<Record<string, unknown>> {
 		return JSON.parse(content) as Record<string, unknown>
 	} catch {
 		// settings.json doesn't exist yet — that's fine
+		logger.debug(`Settings file not found at ${getSettingsPath()}, using defaults`)
 		return {}
 	}
 }

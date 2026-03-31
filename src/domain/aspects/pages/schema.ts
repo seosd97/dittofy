@@ -21,3 +21,5 @@ export const pageStructuresSchema = z.object({
 	consistency: consistencyMetricsSchema.nullable().optional(),
 	designNotes: designNotesSchema,
 })
+
+export type PageStructures = z.infer<typeof pageStructuresSchema>

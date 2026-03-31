@@ -7,6 +7,22 @@ export interface TargetPreset {
 	uiLibrary: string | null
 }
 
+/** Task preset names used for LLM call configuration */
+export const TASK_PRESET_NAMES = [
+	"tokenAnalyzer",
+	"typographyAnalyzer",
+	"componentAnalyzer",
+	"componentChunkAnalyzer",
+	"layoutAnalyzer",
+	"pageAnalyzer",
+	"responsiveAnalyzer",
+	"interactionAnalyzer",
+	"essenceSynthesizer",
+	"analysisPlanner",
+] as const
+
+export type PresetName = (typeof TASK_PRESET_NAMES)[number]
+
 export const TARGET_PRESETS: Record<string, TargetPreset> = {
 	"next-tailwind": {
 		id: "next-tailwind",

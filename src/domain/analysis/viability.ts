@@ -8,6 +8,12 @@ export interface ViabilityResult {
 	severity: "ok" | "warning" | "critical"
 }
 
+/** Viability score thresholds for analysis quality assessment */
+const VIABILITY_THRESHOLDS = {
+	abort: 0.4,
+	warning: 0.7,
+} as const
+
 const ASPECT_CRITICALITY: Record<
 	AspectName,
 	{ weight: number; tier: "critical" | "important" | "enrichment" }
@@ -43,19 +49,19 @@ export function evaluateAnalysisViability(
 		}
 	}
 
-	// Rule 2: weighted score < 0.4 → abort
-	if (score < 0.4) {
+	// Rule 2: weighted score below abort threshold → abort
+	if (score < VIABILITY_THRESHOLDS.abort) {
 		return {
 			viable: false,
 			score,
-			reason: `Weighted viability score ${(score * 100).toFixed(0)}% is below threshold (40%)`,
+			reason: `Weighted viability score ${(score * 100).toFixed(0)}% is below threshold (${VIABILITY_THRESHOLDS.abort * 100}%)`,
 			failedAspects: failed,
 			severity: "critical",
 		}
 	}
 
-	// Rule 3: weighted score 0.4~0.7 → warning
-	if (score < 0.7) {
+	// Rule 3: weighted score between abort and warning → warning
+	if (score < VIABILITY_THRESHOLDS.warning) {
 		return {
 			viable: true,
 			score,
