@@ -1,4 +1,12 @@
-import type { ExtractionOutput, FileTreeNode } from "@defs/extraction.js"
+import type { TechStack } from "@defs/analysis.js"
+import type { MonorepoContext, ProjectMeta } from "@defs/extraction.js"
+import type { FileTreeNode } from "@defs/extraction.js"
+
+export interface ProjectMetaInput {
+	techStack: TechStack
+	projectMeta: ProjectMeta
+	monorepo: MonorepoContext
+}
 
 // ── Constants ───────────────────────────────────────────────
 
@@ -162,9 +170,9 @@ export function formatSize(bytes: number): string {
 
 // ── Project Meta ────────────────────────────────────────────
 
-export function renderProjectMeta(extraction: ExtractionOutput): string {
-	const { techStack } = extraction
-	const meta = extraction.extraction.projectMeta
+export function renderProjectMeta(input: ProjectMetaInput): string {
+	const { techStack } = input
+	const meta = input.projectMeta
 
 	const lines: string[] = ["# Project Meta\n"]
 
@@ -178,13 +186,13 @@ export function renderProjectMeta(extraction: ExtractionOutput): string {
 	if (techStack.uiLibrary) lines.push(`- UI Library: ${techStack.uiLibrary.value}`)
 	lines.push("")
 
-	if (extraction.monorepo.isMonorepo) {
+	if (input.monorepo.isMonorepo) {
 		lines.push("")
 		lines.push("## Monorepo")
-		lines.push(`- Root: ${extraction.monorepo.rootPath}`)
-		lines.push(`- Target: ${extraction.monorepo.targetRelative}`)
-		if (extraction.monorepo.depPaths.length > 0) {
-			lines.push(`- Workspace deps: ${extraction.monorepo.depPaths.join(", ")}`)
+		lines.push(`- Root: ${input.monorepo.rootPath}`)
+		lines.push(`- Target: ${input.monorepo.targetRelative}`)
+		if (input.monorepo.depPaths.length > 0) {
+			lines.push(`- Workspace deps: ${input.monorepo.depPaths.join(", ")}`)
 		}
 	}
 

@@ -103,6 +103,27 @@ describe("resolveEnvironment", () => {
 		)
 		expect(env.summary).toContain("New project")
 	})
+
+	it("warns when target preset is unknown", () => {
+		const warnings: string[] = []
+		resolveEnvironment(createTechStack(), "nonexistent-preset", {
+			info: () => {},
+			warn: (msg) => warnings.push(msg),
+		})
+		expect(warnings.some((w) => w.includes("Unknown target preset"))).toBe(true)
+	})
+
+	it("warns when framework is unrecognized", () => {
+		const warnings: string[] = []
+		resolveEnvironment(
+			createTechStack({
+				framework: { value: "Svelte", confidence: "high" },
+			}),
+			undefined,
+			{ info: () => {}, warn: (msg) => warnings.push(msg) },
+		)
+		expect(warnings).toHaveLength(0)
+	})
 })
 
 describe("buildEnvironmentSection", () => {

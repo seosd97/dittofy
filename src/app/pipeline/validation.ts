@@ -72,11 +72,27 @@ export async function validateGenerateInput(
 		throw new UserError("Analysis file does not contain a valid JSON object.")
 	}
 	const obj = parsed as Record<string, unknown>
-	if (!obj.techStack) {
-		throw new UserError("Analysis file is missing required field: techStack")
+
+	const requiredFields = ["techStack", "essence"]
+	const missing = requiredFields.filter((f) => !obj[f])
+	if (missing.length > 0) {
+		throw new UserError(`Analysis file is missing required fields: ${missing.join(", ")}`)
 	}
-	if (!obj.essence) {
-		throw new UserError("Analysis file is missing required field: essence")
+
+	const aspectFields = [
+		"designTokens",
+		"typography",
+		"componentCatalog",
+		"layoutSystem",
+		"pageStructures",
+		"responsiveStrategy",
+		"interactionPatterns",
+	]
+	const hasAnyAspect = aspectFields.some((f) => f in obj)
+	if (!hasAnyAspect) {
+		throw new UserError(
+			"Analysis file contains no aspect data (designTokens, typography, etc.). Re-run `ditto analyze` to regenerate it.",
+		)
 	}
 
 	// Target preset validation

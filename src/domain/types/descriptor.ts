@@ -3,18 +3,18 @@ import type { SystemPromptConfig } from "@domain/llm-prompts/index.js"
 import type { z } from "zod"
 import type { AnalysisResult } from "./analysis.js"
 import type { AspectName, AspectTypeMap } from "./aspect-map.js"
-/** 청크 분할 분석의 개별 청크 대상 */
+/** Individual chunk target for chunked analysis */
 export interface ChunkTarget {
 	label: string
 	context: string
 }
 
-/** Step 의존성 참조 (심볼릭) */
+/** Symbolic step dependency reference */
 export type StepDependencyRef =
 	| { kind: "type"; stepType: string }
 	| { kind: "all-of-type"; stepType: string }
 
-/** Aspect가 선언하는 구현 단계 */
+/** Implementation steps declared by an aspect */
 export interface StepDeclaration {
 	stepType: string
 	title: string
@@ -24,7 +24,7 @@ export interface StepDeclaration {
 	renderPrompt?: (ctx: import("@defs/templates.js").PromptTemplateContext) => string
 }
 
-/** 문서 생성 선언 */
+/** Document generation declaration */
 export interface DocDeclaration {
 	filename: string
 	title: string
@@ -55,7 +55,7 @@ export interface AspectDescriptor<K extends AspectName> {
 		schemaName: string
 		schemaDescription: string
 		promptConfig: SystemPromptConfig
-		/** Optional: 큰 스키마를 배치 단위로 분할하여 LLM 호출 후 병합 */
+		/** Optional: split a large schema into batches, call LLM per batch, then merge */
 		chunkedAnalysis?: ChunkedAnalysisConfig<K>
 	}
 

@@ -627,7 +627,7 @@ describe("orchestrator", () => {
 			expect(cleanupFn).toHaveBeenCalled()
 		})
 
-		it("cleans up workspace even on failure", async () => {
+		it("preserves workspace on failure for debugging", async () => {
 			const { createWorkspace } = await import("@app/pipeline/workspace.js")
 			const workspaceCleanup = vi.fn().mockResolvedValue(undefined)
 			vi.mocked(createWorkspace).mockResolvedValueOnce({
@@ -647,7 +647,7 @@ describe("orchestrator", () => {
 			const client = createMockLLMClient()
 			await runAnalysisPipeline(".", createMockConfig(), { llmClient: client })
 
-			expect(workspaceCleanup).toHaveBeenCalled()
+			expect(workspaceCleanup).not.toHaveBeenCalled()
 		})
 
 		it("detects monorepo and passes monorepoInfo to runExtraction", async () => {
@@ -893,7 +893,7 @@ describe("orchestrator", () => {
 					output: "/tmp/output",
 					language: "en",
 				}),
-			).rejects.toThrow(/missing required field: techStack/)
+			).rejects.toThrow(/missing required fields: techStack/)
 		})
 
 		it("throws UserError when essence is missing", async () => {
@@ -908,7 +908,7 @@ describe("orchestrator", () => {
 					output: "/tmp/output",
 					language: "en",
 				}),
-			).rejects.toThrow(/missing required field: essence/)
+			).rejects.toThrow(/missing required fields: essence/)
 		})
 
 		it("throws UserError for unknown target preset", async () => {

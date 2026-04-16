@@ -53,4 +53,15 @@ describe("validateAnalysisPlan", () => {
 		expect(result.waves.length).toBeGreaterThan(0)
 		expect(result.waves[0].aspects).toContain("designTokens")
 	})
+
+	it("deduplicates duplicate aspects", () => {
+		const plan: AnalysisPlan = {
+			projectSummary: "Test",
+			aspects: ["designTokens", "designTokens", "typography"],
+			waves: [{ order: 1, aspects: ["designTokens", "typography"] }],
+			fileSelection: {},
+		}
+		const result = validateAnalysisPlan(plan)
+		expect(result.aspects).toEqual(["designTokens", "typography"])
+	})
 })

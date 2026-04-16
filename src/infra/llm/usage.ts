@@ -1,6 +1,14 @@
 import { logger } from "@infra/logger.js"
 import type { LanguageModelUsage } from "ai"
 
+interface ExtendedUsage extends LanguageModelUsage {
+	reasoningTokens?: number
+}
+
+function hasReasoningTokens(u: LanguageModelUsage): u is ExtendedUsage {
+	return "reasoningTokens" in u
+}
+
 export interface UsageRecord {
 	phase: string
 	analyzer: string
@@ -14,7 +22,7 @@ export class UsageTracker {
 	private records: UsageRecord[] = []
 
 	record(phase: string, analyzer: string, usage: LanguageModelUsage) {
-		const reasoningTokens = (usage as unknown as Record<string, unknown>).reasoningTokens
+		const reasoningTokens = hasReasoningTokens(usage) ? usage.reasoningTokens : undefined
 		this.records.push({
 			phase,
 			analyzer,

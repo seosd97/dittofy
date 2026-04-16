@@ -14,8 +14,13 @@ export interface Workspace {
 	cleanup(): Promise<void>
 }
 
+const WORKSPACE_HASH_LENGTH = 8
+
 export async function createWorkspace(projectName: string): Promise<Workspace> {
-	const hash = createHash("md5").update(`${projectName}-${Date.now()}`).digest("hex").slice(0, 8)
+	const hash = createHash("md5")
+		.update(`${projectName}-${Date.now()}`)
+		.digest("hex")
+		.slice(0, WORKSPACE_HASH_LENGTH)
 	const tmpDir = join(getWorkspacesDir(), `${projectName}-${hash}`)
 	await mkdir(tmpDir, { recursive: true })
 

@@ -145,6 +145,14 @@ ditto generate --from ditto-output/my-react-app/analysis.json --docs-only
 ditto generate --from ditto-output/my-react-app/analysis.json --dry-run
 ```
 
+### `ditto init`
+
+대화형 초기 설정: provider를 선택하고 API 키를 입력하면 `~/.ditto/settings.json`에 저장됩니다.
+
+```bash
+ditto init
+```
+
 ### `ditto config`
 
 전역 설정(`~/.ditto/settings.json`)을 관리합니다.

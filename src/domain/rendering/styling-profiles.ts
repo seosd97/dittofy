@@ -1,16 +1,16 @@
 export interface StylingProfile {
 	id: string
-	/** TechStack에서 감지된 styling 문자열 매칭 */
+	/** Match against the styling string detected from TechStack */
 	match: (styling: string) => boolean
-	/** 토큰 정의 전략 (프롬프트에 포함) */
+	/** Token definition strategy (included in prompt) */
 	tokenStrategy: string
-	/** 컴포넌트 스타일 패턴 설명 */
+	/** Component style pattern description */
 	componentStylePattern: string
-	/** 스타일 파일 확장자: .css, .css.ts, .scss 등 */
+	/** Style file extension: .css, .css.ts, .scss, etc. */
 	styleExt: string
-	/** 스타일링 설정 파일 (tailwind.config.ts 등) */
+	/** Styling config file (e.g., tailwind.config.ts) */
 	configFile: string | null
-	/** cn 유틸리티 사용 여부 (Tailwind) */
+	/** Whether the cn utility is used (Tailwind) */
 	usesCn: boolean
 }
 

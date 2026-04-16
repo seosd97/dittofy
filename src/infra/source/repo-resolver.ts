@@ -61,10 +61,18 @@ const GITHUB_URL_PATTERN = /^https?:\/\/github\.com\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9
 const GITHUB_SHORT_PATTERN = /^github:[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+/
 
 function classifyInput(source: string): "local" | "github" {
-	if (GITHUB_URL_PATTERN.test(source) || GITHUB_SHORT_PATTERN.test(source)) {
+	if (GITHUB_SHORT_PATTERN.test(source)) {
 		return "github"
 	}
-	if (source.startsWith("https://github.com/") || source.startsWith("github:")) {
+	if (source.startsWith("https://github.com/") || source.startsWith("http://github.com/")) {
+		if (!GITHUB_URL_PATTERN.test(source)) {
+			throw new UserError(
+				`Invalid GitHub source format: "${source}". Expected "github:owner/repo" or "https://github.com/owner/repo".`,
+			)
+		}
+		return "github"
+	}
+	if (source.startsWith("github:")) {
 		throw new UserError(
 			`Invalid GitHub source format: "${source}". Expected "github:owner/repo" or "https://github.com/owner/repo".`,
 		)
@@ -117,7 +125,9 @@ async function resolveGitHub(source: string): Promise<ResolvedRepo> {
 				await rm(tmpDir, { recursive: true, force: true }).catch(() => {})
 			},
 		}
-	} catch {
+	} catch (downloadError) {
+		const detail = downloadError instanceof Error ? downloadError.message : String(downloadError)
+		logger.debug(`GitHub download failed: ${detail}`)
 		throw new UserError(
 			`Failed to download GitHub repo: ${source}. Check that the URL is correct and the repo is public.`,
 		)
@@ -126,8 +136,19 @@ async function resolveGitHub(source: string): Promise<ResolvedRepo> {
 
 function normalizeToGigetFormat(source: string): string {
 	if (source.startsWith("github:")) return source
-	// https://github.com/user/repo -> github:user/repo
-	return source.replace("https://github.com/", "github:")
+	const url = new URL(source)
+	const parts = url.pathname.split("/").filter(Boolean)
+	if (parts.length < 2) {
+		throw new UserError(`Invalid GitHub URL: "${source}". Expected owner/repo format.`)
+	}
+	const owner = parts[0]
+	const repo = parts[1].replace(".git", "")
+	let gigetSource = `github:${owner}/${repo}`
+	const branch = parts[2] === "tree" && parts[3] ? parts[3] : null
+	if (branch) {
+		gigetSource += `#${branch}`
+	}
+	return gigetSource
 }
 
 function extractRepoName(source: string): string {
@@ -190,7 +211,7 @@ async function detectMonorepo(repoPath: string): Promise<MonorepoResult> {
 					fePackages.push(join(dir, entry.name))
 				}
 			} catch {
-				// skip unreadable packages
+				logger.debug(`Skipping unreadable package: ${pkgJsonPath}`)
 			}
 		}
 	}

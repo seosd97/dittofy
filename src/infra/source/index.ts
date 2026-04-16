@@ -9,7 +9,7 @@ import type {
 	ProjectMeta,
 } from "@defs/extraction.js"
 import type { PhaseError, PhaseResult } from "@defs/pipeline.js"
-import { phaseFail, phaseStart, phaseSuccess } from "@infra/logger.js"
+import { logger, phaseFail, phaseStart, phaseSuccess } from "@infra/logger.js"
 import { buildFileTree, scanFiles } from "./file-scanner.js"
 import { detectTechStack } from "./tech-stack-detector.js"
 
@@ -53,7 +53,7 @@ export async function runExtraction(
 						children: depTree,
 					})
 				} catch {
-					// Skip unreadable dep
+					logger.debug(`Skipping unreadable workspace dep: ${depPath}`)
 				}
 			}
 			fileTree = [...fileTree, ...depNodes]
@@ -77,7 +77,7 @@ export async function runExtraction(
 						children: includeTree,
 					})
 				} catch {
-					// Skip unreadable include path
+					logger.debug(`Skipping unreadable include path: ${includePath}`)
 				}
 			}
 			if (includeNodes.length > 0) {
