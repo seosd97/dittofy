@@ -16,9 +16,9 @@ export interface RunAnalyzerOptions {
 }
 
 /**
- * 제네릭 analyzer runner.
- * AspectDescriptor의 analyzer 설정을 받아 LLM 호출 → 사용량 기록 → 결과 반환.
- * chunkedAnalysis가 설정되어 있으면 배치 분할 모드로 동작.
+ * Generic analyzer runner.
+ * Takes an AspectDescriptor's analyzer config, calls the LLM, records usage, and returns the result.
+ * Operates in batch-split mode when chunkedAnalysis is configured.
  */
 export async function runAnalyzer<K extends AspectName>(
 	descriptor: AspectDescriptor<K>,
@@ -87,7 +87,7 @@ async function runChunkedAnalysis<K extends AspectName>(
 
 	const crossCtx = crossAspectContext ? `${crossAspectContext}\n\n` : ""
 
-	// 청크가 1개면 단일 호출로 fallback (오버헤드 방지)
+	// Fallback to a single call when there is only one chunk (avoid overhead)
 	if (chunks.length <= 1) {
 		const prompt = `${crossCtx}## Source Code\n${context.codeContext}`
 
@@ -137,5 +137,22 @@ async function runChunkedAnalysis<K extends AspectName>(
 		)
 	}
 
-	return chunkedAnalysis.merge(results)
+	const validated = results.filter((r) => {
+		if (chunkedAnalysis.chunkSchema) {
+			const parsed = chunkedAnalysis.chunkSchema.safeParse(r)
+			if (!parsed.success) {
+				logger.warn(
+					`[${descriptor.displayName}] Dropping malformed chunk: ${parsed.error.issues[0]?.message ?? "validation failed"}`,
+				)
+				return false
+			}
+		}
+		return true
+	})
+
+	if (validated.length === 0) {
+		throw new Error(`[${descriptor.displayName}] All ${chunks.length} chunks failed validation`)
+	}
+
+	return chunkedAnalysis.merge(validated)
 }

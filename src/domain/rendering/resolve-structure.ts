@@ -1,40 +1,21 @@
 import type { StepType } from "@defs/prompts.js"
 import { type StylingProfile, resolveStylingProfile } from "./styling-profiles.js"
 
-/**
- * Conventional project structure resolved from the environment.
- * Provides concrete file paths so generated prompts produce consistent output.
- */
 export interface ProjectStructure {
-	/** Directory for all style files (e.g., "src/styles") */
 	stylesDir: string
-	/** Where design tokens are defined (e.g., "src/styles/tokens.css") */
 	tokensFile: string
-	/** Where global/base styles go (e.g., "src/styles/globals.css") */
 	globalsFile: string
-	/** Directory for layout components (e.g., "src/components/layout") */
 	layoutDir: string
-	/** Directory for reusable UI components (e.g., "src/components/ui") */
 	uiDir: string
-	/** Directory or pattern for page components/routes */
 	pagesDir: string
-	/** Directory for shared utility functions (e.g., "src/lib/utils") */
 	utilsDir: string
-	/** Root layout/shell file */
 	rootLayout: string
-	/** Styling config file if any (e.g., "tailwind.config.ts") */
 	stylingConfig: string | null
-	/** Component file extension (e.g., ".tsx", ".vue") */
 	componentExt: string
-	/** Script file extension (e.g., ".ts", ".js") */
 	scriptExt: string
-	/** Layout component files */
 	layoutFiles: LayoutFiles
-	/** Page files */
 	pageFiles: PageFiles
-	/** Utility files */
 	utilFiles: UtilFiles
-	/** Style files beyond tokens/globals */
 	styleFiles: StyleFiles
 }
 
@@ -51,46 +32,166 @@ interface PageFiles {
 }
 
 interface UtilFiles {
-	/** className merge utility (e.g., cn() for Tailwind) */
 	cn: string
-	/** Animation/transition helpers */
 	animations: string
 }
 
 interface StyleFiles {
-	/** Component-level style patterns description */
 	componentStylePattern: string
-	/** Animation/keyframe definitions */
 	animations: string
 }
+
+// ── Framework Path Config ────────────────────────────────────────
+
+interface FrameworkPaths {
+	stylesDir: string
+	layoutDir: string
+	uiDir: string
+	pagesDir: string
+	utilsDir: string
+	rootLayout: (ext: string) => string
+	pageHome: (ext: string) => string
+	pageAbout: (ext: string) => string
+}
+
+const FRAMEWORK_CONFIGS: Record<string, FrameworkPaths> = {
+	nextApp: {
+		stylesDir: "src/styles",
+		layoutDir: "src/components/layout",
+		uiDir: "src/components/ui",
+		pagesDir: "src/app",
+		utilsDir: "src/lib/utils",
+		rootLayout: (ext) => `src/app/layout${ext}`,
+		pageHome: (ext) => `src/app/page${ext}`,
+		pageAbout: (ext) => `src/app/about/page${ext}`,
+	},
+	nextPages: {
+		stylesDir: "src/styles",
+		layoutDir: "src/components/layout",
+		uiDir: "src/components/ui",
+		pagesDir: "src/pages",
+		utilsDir: "src/lib/utils",
+		rootLayout: (ext) => `src/pages/_app${ext}`,
+		pageHome: (ext) => `src/pages/index${ext}`,
+		pageAbout: (ext) => `src/pages/about${ext}`,
+	},
+	nuxt: {
+		stylesDir: "assets/css",
+		layoutDir: "components/layout",
+		uiDir: "components/ui",
+		pagesDir: "pages",
+		utilsDir: "utils",
+		rootLayout: (ext) => `layouts/default${ext}`,
+		pageHome: (ext) => `pages/index${ext}`,
+		pageAbout: (ext) => `pages/about${ext}`,
+	},
+	vue: {
+		stylesDir: "src/assets/styles",
+		layoutDir: "src/components/layout",
+		uiDir: "src/components/ui",
+		pagesDir: "src/views",
+		utilsDir: "src/utils",
+		rootLayout: (ext) => `src/App${ext}`,
+		pageHome: (ext) => `src/views/Home${ext}`,
+		pageAbout: (ext) => `src/views/About${ext}`,
+	},
+	svelte: {
+		stylesDir: "src/styles",
+		layoutDir: "src/lib/components/layout",
+		uiDir: "src/lib/components/ui",
+		pagesDir: "src/routes",
+		utilsDir: "src/lib/utils",
+		rootLayout: () => "src/routes/+layout.svelte",
+		pageHome: () => "src/routes/+page.svelte",
+		pageAbout: () => "src/routes/about/+page.svelte",
+	},
+	reactSpa: {
+		stylesDir: "src/styles",
+		layoutDir: "src/components/layout",
+		uiDir: "src/components/ui",
+		pagesDir: "src/pages",
+		utilsDir: "src/utils",
+		rootLayout: (ext) => `src/App${ext}`,
+		pageHome: (ext) => `src/pages/Home${ext}`,
+		pageAbout: (ext) => `src/pages/About${ext}`,
+	},
+}
+
+function resolveFrameworkKey(framework: string): { key: string; recognized: boolean } {
+	const fw = framework.toLowerCase()
+	if (fw.includes("next")) {
+		return { key: fw.includes("pages") ? "nextPages" : "nextApp", recognized: true }
+	}
+	if (fw.includes("nuxt")) return { key: "nuxt", recognized: true }
+	if (fw.includes("vue")) return { key: "vue", recognized: true }
+	if (fw.includes("svelte")) return { key: "svelte", recognized: true }
+	if (fw.includes("react")) return { key: "reactSpa", recognized: true }
+	return { key: "reactSpa", recognized: false }
+}
+
+// ── Public API ──────────────────────────────────────────────────
 
 export function resolveProjectStructure(opts: {
 	framework: string
 	language: string
 	styling: string
+	log?: { warn?: (msg: string) => void }
 }): ProjectStructure {
 	const framework = opts.framework.toLowerCase()
-	const styling = opts.styling.toLowerCase()
-	const profile = resolveStylingProfile(styling)
+	const profile = resolveStylingProfile(opts.styling.toLowerCase())
 
 	const componentExt = resolveComponentExt(framework, opts.language)
 	const scriptExt = resolveScriptExt(opts.language)
 
-	if (framework.includes("next")) {
-		return buildNextStructure(componentExt, scriptExt, profile, framework)
+	const { key, recognized } = resolveFrameworkKey(framework)
+	if (!recognized) {
+		opts.log?.warn?.(
+			`Unrecognized framework "${opts.framework}" — defaulting to React SPA structure`,
+		)
 	}
-	if (framework.includes("nuxt")) {
-		return buildNuxtStructure(componentExt, scriptExt, profile)
-	}
-	if (framework.includes("vue")) {
-		return buildVueStructure(componentExt, scriptExt, profile)
-	}
-	if (framework.includes("svelte")) {
-		return buildSvelteStructure(scriptExt, profile)
-	}
+	const cfg = FRAMEWORK_CONFIGS[key]
 
-	return buildReactSpaStructure(componentExt, scriptExt, profile)
+	return buildStructure(cfg, componentExt, scriptExt, profile)
 }
+
+// ── Structure Builder ───────────────────────────────────────────
+
+function buildStructure(
+	cfg: FrameworkPaths,
+	componentExt: string,
+	scriptExt: string,
+	profile: StylingProfile,
+): ProjectStructure {
+	const ext = componentExt
+
+	return {
+		stylesDir: cfg.stylesDir,
+		tokensFile: `${cfg.stylesDir}/tokens${profile.styleExt}`,
+		globalsFile: `${cfg.stylesDir}/globals${profile.styleExt}`,
+		layoutDir: cfg.layoutDir,
+		uiDir: cfg.uiDir,
+		pagesDir: cfg.pagesDir,
+		utilsDir: cfg.utilsDir,
+		rootLayout: cfg.rootLayout(ext),
+		stylingConfig: profile.configFile,
+		componentExt: ext,
+		scriptExt,
+		layoutFiles: {
+			header: `${cfg.layoutDir}/Header${ext}`,
+			footer: `${cfg.layoutDir}/Footer${ext}`,
+			navigation: `${cfg.layoutDir}/Navigation${ext}`,
+			pageContainer: `${cfg.layoutDir}/PageContainer${ext}`,
+		},
+		pageFiles: {
+			home: cfg.pageHome(ext),
+			about: cfg.pageAbout(ext),
+		},
+		utilFiles: resolveUtilFiles(cfg.utilsDir, scriptExt, profile),
+		styleFiles: resolveStyleFiles(cfg.stylesDir, profile),
+	}
+}
+
+// ── Extension Resolvers ─────────────────────────────────────────
 
 function resolveComponentExt(framework: string, language: string): string {
 	const fw = framework.toLowerCase()
@@ -105,12 +206,7 @@ function resolveScriptExt(language: string): string {
 	return language.toLowerCase().includes("typescript") ? ".ts" : ".js"
 }
 
-function resolveStyleFiles(stylesDir: string, profile: StylingProfile): StyleFiles {
-	return {
-		componentStylePattern: profile.componentStylePattern,
-		animations: `${stylesDir}/animations${profile.styleExt}`,
-	}
-}
+// ── File Resolvers ──────────────────────────────────────────────
 
 function resolveUtilFiles(utilsDir: string, scriptExt: string, profile: StylingProfile): UtilFiles {
 	return {
@@ -119,217 +215,26 @@ function resolveUtilFiles(utilsDir: string, scriptExt: string, profile: StylingP
 	}
 }
 
-function resolveTokensFile(stylesDir: string, profile: StylingProfile): string {
-	return `${stylesDir}/tokens${profile.styleExt}`
-}
-
-function resolveGlobalsFile(stylesDir: string, profile: StylingProfile): string {
-	return `${stylesDir}/globals${profile.styleExt}`
-}
-
-// ── Framework-specific builders ──
-
-function buildNextStructure(
-	ext: string,
-	scriptExt: string,
-	profile: StylingProfile,
-	framework: string,
-): ProjectStructure {
-	const isAppRouter = !framework.toLowerCase().includes("pages")
-	const stylesDir = "src/styles"
-	const utilsDir = "src/lib/utils"
-
-	const common = {
-		stylesDir,
-		tokensFile: resolveTokensFile(stylesDir, profile),
-		globalsFile: resolveGlobalsFile(stylesDir, profile),
-		layoutDir: "src/components/layout",
-		uiDir: "src/components/ui",
-		utilsDir,
-		stylingConfig: profile.configFile,
-		componentExt: ext,
-		scriptExt,
-		layoutFiles: {
-			header: `src/components/layout/Header${ext}`,
-			footer: `src/components/layout/Footer${ext}`,
-			navigation: `src/components/layout/Navigation${ext}`,
-			pageContainer: `src/components/layout/PageContainer${ext}`,
-		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
-		styleFiles: resolveStyleFiles(stylesDir, profile),
-	}
-
-	if (isAppRouter) {
-		return {
-			...common,
-			pagesDir: "src/app",
-			rootLayout: `src/app/layout${ext}`,
-			pageFiles: {
-				home: `src/app/page${ext}`,
-				about: `src/app/about/page${ext}`,
-			},
-		}
-	}
-
+function resolveStyleFiles(stylesDir: string, profile: StylingProfile): StyleFiles {
 	return {
-		...common,
-		pagesDir: "src/pages",
-		rootLayout: `src/pages/_app${ext}`,
-		pageFiles: {
-			home: `src/pages/index${ext}`,
-			about: `src/pages/about${ext}`,
-		},
+		componentStylePattern: profile.componentStylePattern,
+		animations: `${stylesDir}/animations${profile.styleExt}`,
 	}
 }
 
-function buildNuxtStructure(
-	ext: string,
-	scriptExt: string,
-	profile: StylingProfile,
-): ProjectStructure {
-	const stylesDir = "assets/css"
-	const utilsDir = "utils"
-	return {
-		stylesDir,
-		tokensFile: resolveTokensFile(stylesDir, profile),
-		globalsFile: resolveGlobalsFile(stylesDir, profile),
-		layoutDir: "components/layout",
-		uiDir: "components/ui",
-		pagesDir: "pages",
-		utilsDir,
-		rootLayout: `layouts/default${ext}`,
-		stylingConfig: profile.configFile,
-		componentExt: ext,
-		scriptExt,
-		layoutFiles: {
-			header: `components/layout/Header${ext}`,
-			footer: `components/layout/Footer${ext}`,
-			navigation: `components/layout/Navigation${ext}`,
-			pageContainer: `components/layout/PageContainer${ext}`,
-		},
-		pageFiles: {
-			home: `pages/index${ext}`,
-			about: `pages/about${ext}`,
-		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
-		styleFiles: resolveStyleFiles(stylesDir, profile),
-	}
-}
-
-function buildVueStructure(
-	ext: string,
-	scriptExt: string,
-	profile: StylingProfile,
-): ProjectStructure {
-	const stylesDir = "src/assets/styles"
-	const utilsDir = "src/utils"
-	return {
-		stylesDir,
-		tokensFile: resolveTokensFile(stylesDir, profile),
-		globalsFile: resolveGlobalsFile(stylesDir, profile),
-		layoutDir: "src/components/layout",
-		uiDir: "src/components/ui",
-		pagesDir: "src/views",
-		utilsDir,
-		rootLayout: `src/App${ext}`,
-		stylingConfig: profile.configFile,
-		componentExt: ext,
-		scriptExt,
-		layoutFiles: {
-			header: `src/components/layout/Header${ext}`,
-			footer: `src/components/layout/Footer${ext}`,
-			navigation: `src/components/layout/Navigation${ext}`,
-			pageContainer: `src/components/layout/PageContainer${ext}`,
-		},
-		pageFiles: {
-			home: `src/views/Home${ext}`,
-			about: `src/views/About${ext}`,
-		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
-		styleFiles: resolveStyleFiles(stylesDir, profile),
-	}
-}
-
-function buildSvelteStructure(scriptExt: string, profile: StylingProfile): ProjectStructure {
-	const ext = ".svelte"
-	const stylesDir = "src/styles"
-	const utilsDir = "src/lib/utils"
-	return {
-		stylesDir,
-		tokensFile: resolveTokensFile(stylesDir, profile),
-		globalsFile: resolveGlobalsFile(stylesDir, profile),
-		layoutDir: "src/lib/components/layout",
-		uiDir: "src/lib/components/ui",
-		pagesDir: "src/routes",
-		utilsDir,
-		rootLayout: "src/routes/+layout.svelte",
-		stylingConfig: profile.configFile,
-		componentExt: ext,
-		scriptExt,
-		layoutFiles: {
-			header: `src/lib/components/layout/Header${ext}`,
-			footer: `src/lib/components/layout/Footer${ext}`,
-			navigation: `src/lib/components/layout/Navigation${ext}`,
-			pageContainer: `src/lib/components/layout/PageContainer${ext}`,
-		},
-		pageFiles: {
-			home: "src/routes/+page.svelte",
-			about: "src/routes/about/+page.svelte",
-		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
-		styleFiles: resolveStyleFiles(stylesDir, profile),
-	}
-}
-
-function buildReactSpaStructure(
-	ext: string,
-	scriptExt: string,
-	profile: StylingProfile,
-): ProjectStructure {
-	const stylesDir = "src/styles"
-	const utilsDir = "src/utils"
-	return {
-		stylesDir,
-		tokensFile: resolveTokensFile(stylesDir, profile),
-		globalsFile: resolveGlobalsFile(stylesDir, profile),
-		layoutDir: "src/components/layout",
-		uiDir: "src/components/ui",
-		pagesDir: "src/pages",
-		utilsDir,
-		rootLayout: `src/App${ext}`,
-		stylingConfig: profile.configFile,
-		componentExt: ext,
-		scriptExt,
-		layoutFiles: {
-			header: `src/components/layout/Header${ext}`,
-			footer: `src/components/layout/Footer${ext}`,
-			navigation: `src/components/layout/Navigation${ext}`,
-			pageContainer: `src/components/layout/PageContainer${ext}`,
-		},
-		pageFiles: {
-			home: `src/pages/Home${ext}`,
-			about: `src/pages/About${ext}`,
-		},
-		utilFiles: resolveUtilFiles(utilsDir, scriptExt, profile),
-		styleFiles: resolveStyleFiles(stylesDir, profile),
-	}
-}
-
-// ── File structure guide builders ──
+// ── File Structure Guides ───────────────────────────────────────
 
 function buildSetupGuide(s: ProjectStructure): string[] {
-	const lines: string[] = []
-	lines.push(`${s.stylingConfig}              # styling/token configuration`)
-	lines.push(`${s.stylesDir}/`)
-	lines.push(`  ${basename(s.tokensFile)}                    # design token definitions`)
-	lines.push(
+	return [
+		`${s.stylingConfig}              # styling/token configuration`,
+		`${s.stylesDir}/`,
+		`  ${basename(s.tokensFile)}                    # design token definitions`,
 		`  ${basename(s.globalsFile)}                   # global base styles (reset, body defaults)`,
-	)
-	lines.push(`${s.layoutDir}/                    # layout components (created in later steps)`)
-	lines.push(`${s.uiDir}/                        # UI components (created in later steps)`)
-	lines.push(`${s.utilsDir}/`)
-	lines.push(`  ${basename(s.utilFiles.cn)}                       # className merge utility`)
-	return lines
+		`${s.layoutDir}/                    # layout components (created in later steps)`,
+		`${s.uiDir}/                        # UI components (created in later steps)`,
+		`${s.utilsDir}/`,
+		`  ${basename(s.utilFiles.cn)}                       # className merge utility`,
+	]
 }
 
 function buildDesignTokensGuide(s: ProjectStructure): string[] {
@@ -403,11 +308,6 @@ const stepBuilders: Record<StepType, (s: ProjectStructure) => string[]> = {
 	interactions: buildInteractionsGuide,
 }
 
-/**
- * Builds a file structure guide section for a specific step type.
- * Injected into the prompt text sent to the LLM so it generates
- * instructions with concrete, conventional file paths.
- */
 export function buildFileStructureGuide(stepType: StepType, structure: ProjectStructure): string {
 	const lines: string[] = []
 	lines.push("## File Structure")
@@ -424,7 +324,6 @@ export function buildFileStructureGuide(stepType: StepType, structure: ProjectSt
 		return lines.join("\n")
 	}
 
-	// Special cases with non-code-block content
 	if (stepType === "responsive") {
 		lines.push("Modify existing files. Only create new files if a responsive utility is needed:")
 	} else if (stepType === "interactions") {

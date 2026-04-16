@@ -1,5 +1,6 @@
 import { access, readFile, readdir } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
+import { logger } from "@infra/logger.js"
 
 /** Framework dependencies that indicate a frontend package */
 export const FE_INDICATORS = [
@@ -41,21 +42,35 @@ export async function findMonorepoRoot(targetPath: string): Promise<string | nul
 		const parent = dirname(current)
 		if (parent === current) break
 
-		try {
-			const pkgContent = await readFile(resolve(parent, "package.json"), "utf-8")
-			const pkg = JSON.parse(pkgContent)
-			if (pkg.workspaces || Array.isArray(pkg.workspaces)) return parent
-		} catch {}
-
-		try {
-			await access(resolve(parent, "pnpm-workspace.yaml"))
+		if (await hasWorkspaceConfig(parent)) {
 			return parent
-		} catch {}
+		}
 
 		current = parent
 	}
 
+	logger.debug(`Monorepo scan: checked ${iterations} parent directories, no root found`)
+
 	return null
+}
+
+async function hasWorkspaceConfig(dir: string): Promise<boolean> {
+	try {
+		const pkgContent = await readFile(resolve(dir, "package.json"), "utf-8")
+		const pkg = JSON.parse(pkgContent)
+		if (pkg.workspaces) return true
+	} catch {
+		// no package.json
+	}
+
+	try {
+		await access(resolve(dir, "pnpm-workspace.yaml"))
+		return true
+	} catch {
+		// no pnpm-workspace.yaml
+	}
+
+	return false
 }
 
 /**

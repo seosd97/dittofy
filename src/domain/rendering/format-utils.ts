@@ -44,3 +44,24 @@ export function renderConsistency(consistency: ConsistencyMetrics | undefined): 
 	}
 	return lines.join("\n")
 }
+
+/** Render a one-line consistency summary for aspect sections */
+export function consistencyLine(c: ConsistencyMetrics | null | undefined): string {
+	if (!c) return ""
+	return `*Consistency: ${c.score}/100 (${c.maturity})*\n`
+}
+
+/** Render design notes (observations + anomalies) for aspect sections */
+export function renderNotes(
+	designNotes: { observations: string[]; anomalies?: string[] } | null | undefined,
+): string {
+	if (!designNotes) return ""
+	const lines: string[] = []
+	if (designNotes.observations.length > 0) {
+		lines.push(`*Notes: ${designNotes.observations.join(". ")}*`)
+	}
+	if (designNotes.anomalies && designNotes.anomalies.length > 0) {
+		lines.push(`*Anomalies: ${designNotes.anomalies.join(". ")}*`)
+	}
+	return lines.length > 0 ? `\n${lines.join("\n")}\n` : ""
+}

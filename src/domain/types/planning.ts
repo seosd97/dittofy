@@ -2,12 +2,12 @@ import type { StepDeclaration, StepDependencyRef } from "./descriptor.js"
 
 export type { StepDeclaration, StepDependencyRef }
 
-/** Infrastructure 단계 (aspect가 아닌 고정 단계) */
+/** Infrastructure step (fixed step not tied to a specific aspect) */
 export interface InfraStepDeclaration extends StepDeclaration {
 	alwaysInclude: true
 }
 
-/** 문서 계획 결과 */
+/** Document planning result */
 export interface DocumentPlanResult {
 	filename: string
 	title: string

@@ -14,6 +14,7 @@ Ditto extracts **design essence for mass production**, NOT 1:1 source replicatio
 ## Commands
 
 ```bash
+ditto init                                                  # 대화형 초기 설정 (provider + API key)
 ditto analyze <source>                                      # 분석 + 생성 한번에
 ditto analyze <source> --analyze-only                       # 분석만 (analysis.json 생성)
 ditto analyze <source> --dry-run                            # 추출만 (LLM 호출 없이 구조 확인)
@@ -50,13 +51,16 @@ Phase 2 - Pass 2: Wave Execution (LLM N회)
   Wave 2: typography + layoutSystem (병렬)
   Wave 3: 나머지 aspects (병렬, concurrency=3)
   선행 wave 결과를 cross-aspect context로 후행에 주입
+  진행률 바: [█████░░░░░] [3/6] ETA: ~2m 30s
   → .tmp/result-{aspect}.json
 
 Phase 2 - Pass 3: Synthesis (LLM 1회)
   viability 평가 → reconciliation → essence 합성
   → analysis.json + analysis.md
+  상세 리포트: Aspect별 성공/실패, 토큰 사용량 분석, 출력 파일 목록
 
 Cleanup: .tmp/ 삭제 (--debug 시 보존)
+  실패 시 workspace 보존 + 안내 메시지 출력
 
 ━━━ runGeneratePipeline ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -73,6 +77,7 @@ Phase 4: 구현 프롬프트 생성 (LLM 0회, 템플릿)
 - **Wave-based execution**: designTokens → typography+layout → 나머지 순서로 실행, 선행 결과를 후행에 제공
 - **Monorepo support**: findMonorepoRoot로 자동 감지, 2-level file tree 생성
 - **tmp workspace**: 중간 산출물을 .tmp/에 저장하여 디버깅/재시도 지원
+- **Workspace preservation on failure**: 실패 시 .tmp/ 유지 + 경로 안내
 - **2-command separation**: `ditto analyze` (LLM 비용 발생) + `ditto generate` (무료, 반복 가능)
 - **Dual output**: analysis.json (내부용, generate 파이프라인 입력) + analysis.md (사용자용 요약)
 
@@ -103,6 +108,15 @@ Phase 4: 구현 프롬프트 생성 (LLM 0회, 템플릿)
 | `interactions` | interactions aspect (조건부) |
 
 Steps form a dependency DAG: `setup → design-tokens → typography → layout-shell → showcase-pages → responsive/interactions`
+
+## CLI Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `ditto analyze <source>` | Analyze + generate (LLM calls) |
+| `ditto generate --from` | Generate from existing analysis (free) |
+| `ditto config show/set/path` | Manage global config |
+| `ditto init` | Interactive setup: select provider, enter API key, save to settings.json |
 
 ## Tech Stack
 
@@ -162,7 +176,7 @@ Each design aspect is a self-contained vertical slice under `src/domain/aspects/
 src/
 ├── index.ts
 ├── infra/                          # Layer 0: I/O
-│   ├── fs.ts, logger.ts
+│   ├── fs.ts, logger.ts, progress.ts  # 진행률 바 (ETA, aspect tracker)
 │   ├── llm/                        # client, errors, presets, retry, usage
 │   ├── source/                     # file-scanner, repo-resolver, workspace-detector, tech-stack-detector
 │   ├── output/                     # docs.ts, prompts.ts
@@ -171,15 +185,15 @@ src/
 │   ├── types/                      # 모든 타입 (@defs/*)
 │   ├── constants/                  # analysis, extraction, token-estimation, target-presets
 │   ├── aspects/                    # 7 vertical slices
-│   ├── rendering/                  # format-utils, tree-renderer, resolve-environment, step-contracts 등
+│   ├── rendering/                  # format-utils, tree-renderer, resolve-environment, step-contracts, renderers/
 │   ├── analysis/                   # context-builder, plan-parser, viability, reconciliation, file-resolver
 │   ├── llm-prompts/               # shared-principles, prompt-builder, analyzer-configs
 │   └── path-utils.ts
 └── app/                            # Layer 2: 오케스트레이션
-    ├── runner.ts                   # LLM analyzer runner
-    ├── pipeline/                   # orchestrator, planner, wave-executor, workspace 등
+    ├── runner.ts                   # LLM analyzer runner (chunked + single)
+    ├── pipeline/                   # orchestrator, planner, wave-executor, workspace, validation 등
     │   └── planners/
-    └── cli/                        # commands (analyze, generate, config)
+    └── cli/                        # commands (analyze, generate, config, init)
 ```
 
 ## Common Commands
@@ -201,4 +215,4 @@ pnpm lint:fix            # Biome auto-fix
 - Prefer `as const` for constant objects
 - Use `type` imports for type-only references
 - Tests live in `__tests__/` directories co-located with source
-- Korean is preferred for docs and user-facing communication
+- Korean is preferred for user-facing docs (README, ARCHITECTURE); code comments in English

@@ -42,6 +42,7 @@ export function resolveEnvironment(
 				framework: preset.framework,
 				language: preset.language,
 				styling: preset.styling,
+				log,
 			})
 
 			const env: EnvironmentProfile = {
@@ -85,7 +86,7 @@ export function resolveEnvironment(
 	const tokenStrategy = profile.tokenStrategy
 
 	const summary = buildSummaryLine(mode, framework, language, styling, buildTool)
-	const structure = resolveProjectStructure({ framework, language, styling })
+	const structure = resolveProjectStructure({ framework, language, styling, log })
 
 	const env: EnvironmentProfile = {
 		mode,

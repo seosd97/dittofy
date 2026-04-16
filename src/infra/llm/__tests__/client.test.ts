@@ -250,7 +250,7 @@ describe("LLMClient.call", () => {
 	it("does NOT retry 401 errors", async () => {
 		const error = new Error("Unauthorized") as Error & { statusCode: number }
 		error.statusCode = 401
-		mockedGenerateText.mockRejectedValue(error)
+		mockedGenerateText.mockRejectedValueOnce(error)
 
 		const client = new LLMClient(mockConfig)
 		await expect(client.call(makeCallParams())).rejects.toThrow("Unauthorized")
@@ -262,7 +262,7 @@ describe("LLMClient.call", () => {
 	it("does NOT retry 403 errors", async () => {
 		const error = new Error("Forbidden") as Error & { statusCode: number }
 		error.statusCode = 403
-		mockedGenerateText.mockRejectedValue(error)
+		mockedGenerateText.mockRejectedValueOnce(error)
 
 		const client = new LLMClient(mockConfig)
 		await expect(client.call(makeCallParams())).rejects.toThrow("Forbidden")
@@ -338,6 +338,161 @@ describe("LLMClient.call", () => {
 		})
 	})
 
+	describe("normalizeNullArrays (via json_object mode)", () => {
+		beforeEach(() => {
+			mockedGenerateText.mockReset()
+		})
+
+		it("converts null to [] for array fields in schema", async () => {
+			const schema = z.object({
+				items: z.array(z.string()),
+				name: z.string().nullable(),
+			})
+
+			const jsonResponse = {
+				output: { items: null, name: null },
+				text: '{"items":null,"name":null}',
+				usage: { inputTokens: 10, outputTokens: 5 },
+				finishReason: "stop",
+			}
+			mockedGenerateText
+				.mockResolvedValueOnce(jsonResponse)
+				.mockResolvedValueOnce(jsonResponse)
+				.mockResolvedValueOnce(jsonResponse)
+
+			const zaiConfig: DittoConfig = {
+				...mockConfig,
+				provider: "zai",
+				model: "glm-5",
+				apiKeys: { zai: "test-zai-key" },
+			}
+			const client = new LLMClient(zaiConfig)
+
+			const result = await client.call({
+				preset: "tokenAnalyzer",
+				system: "test",
+				prompt: "test",
+				schema,
+				schemaName: "NullArrayTest",
+			})
+
+			expect(result.data.items).toEqual([])
+			expect(result.data.name).toBeNull()
+		})
+
+		it("preserves defaultTheme null when other fields are arrays", async () => {
+			const schema = z.object({
+				spacing: z.array(z.object({ name: z.string(), value: z.string() })),
+				defaultTheme: z.string().nullable().optional(),
+			})
+
+			const jsonResponse = {
+				output: { spacing: null, defaultTheme: null },
+				text: '{"spacing":null,"defaultTheme":null}',
+				usage: { inputTokens: 10, outputTokens: 5 },
+				finishReason: "stop",
+			}
+			mockedGenerateText
+				.mockResolvedValueOnce(jsonResponse)
+				.mockResolvedValueOnce(jsonResponse)
+				.mockResolvedValueOnce(jsonResponse)
+
+			const zaiConfig: DittoConfig = {
+				...mockConfig,
+				provider: "zai",
+				model: "glm-5",
+				apiKeys: { zai: "test-zai-key" },
+			}
+			const client = new LLMClient(zaiConfig)
+
+			const result = await client.call({
+				preset: "tokenAnalyzer",
+				system: "test",
+				prompt: "test",
+				schema,
+				schemaName: "DefaultThemeTest",
+			})
+
+			expect(result.data.spacing).toEqual([])
+			expect(result.data.defaultTheme).toBeNull()
+		})
+
+		it("handles ZodLazy wrapped array fields", async () => {
+			const schema = z.lazy(() =>
+				z.object({
+					items: z.array(z.string()),
+					name: z.string().nullable(),
+				}),
+			)
+
+			const jsonResponse = {
+				output: { items: null, name: null },
+				text: '{"items":null,"name":null}',
+				usage: { inputTokens: 10, outputTokens: 5 },
+				finishReason: "stop",
+			}
+			mockedGenerateText
+				.mockResolvedValueOnce(jsonResponse)
+				.mockResolvedValueOnce(jsonResponse)
+				.mockResolvedValueOnce(jsonResponse)
+
+			const zaiConfig: DittoConfig = {
+				...mockConfig,
+				provider: "zai",
+				model: "glm-5",
+				apiKeys: { zai: "test-zai-key" },
+			}
+			const client = new LLMClient(zaiConfig)
+
+			const result = await client.call({
+				preset: "tokenAnalyzer",
+				system: "test",
+				prompt: "test",
+				schema,
+				schemaName: "LazySchemaTest",
+			})
+
+			expect(result.data.items).toEqual([])
+			expect(result.data.name).toBeNull()
+		})
+
+		it("handles ZodDefault wrapped array fields", async () => {
+			const schema = z.object({
+				items: z.array(z.string()).default([]),
+				label: z.string(),
+			})
+
+			const jsonResponse = {
+				output: { items: null, label: "test" },
+				text: '{"items":null,"label":"test"}',
+				usage: { inputTokens: 10, outputTokens: 5 },
+				finishReason: "stop",
+			}
+			mockedGenerateText
+				.mockResolvedValueOnce(jsonResponse)
+				.mockResolvedValueOnce(jsonResponse)
+				.mockResolvedValueOnce(jsonResponse)
+
+			const zaiConfig: DittoConfig = {
+				...mockConfig,
+				provider: "zai",
+				model: "glm-5",
+				apiKeys: { zai: "test-zai-key" },
+			}
+			const client = new LLMClient(zaiConfig)
+
+			const result = await client.call({
+				preset: "tokenAnalyzer",
+				system: "test",
+				prompt: "test",
+				schema,
+				schemaName: "DefaultSchemaTest",
+			})
+
+			expect(result.data.items).toEqual([])
+		})
+	})
+
 	it("creates groq provider model from api key + model id", () => {
 		const config: DittoConfig = {
 			...mockConfig,
@@ -399,9 +554,11 @@ describe("LLMClient.call", () => {
 	})
 
 	it("throws after exhausting validation retries", async () => {
-		mockedGenerateText.mockRejectedValue(
-			new SchemaValidationError("TestSchema", "always invalid", {}),
-		)
+		mockedGenerateText.mockReset()
+		const validationError = new SchemaValidationError("TestSchema", "always invalid", {})
+		for (let i = 0; i < 6; i++) {
+			mockedGenerateText.mockRejectedValueOnce(validationError)
+		}
 
 		const client = new LLMClient(mockConfig)
 		await expect(client.call(makeCallParams({ maxValidationRetries: 1 }))).rejects.toThrow(

@@ -143,6 +143,14 @@ ditto generate --from ditto-output/my-react-app/analysis.json --docs-only
 ditto generate --from ditto-output/my-react-app/analysis.json --dry-run
 ```
 
+### `ditto init`
+
+Interactive first-time setup: select a provider, enter your API key, and save to `~/.ditto/settings.json`.
+
+```bash
+ditto init
+```
+
 ### `ditto config`
 
 Manage global config at `~/.ditto/settings.json`.

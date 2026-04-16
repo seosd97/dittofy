@@ -6,8 +6,7 @@ import type {
 	ResponsiveStrategy,
 	TypographySystem,
 } from "@defs/analysis.js"
-
-// ── Color Reference ──────────────────────────────────────────────
+import { mdTable } from "@domain/rendering/format-utils.js"
 
 export function buildColorReference(
 	tokens: DesignTokens | null,
@@ -20,109 +19,66 @@ export function buildColorReference(
 	for (const group of tokens.colorGroups) {
 		const level = group.level ? ` (${group.level})` : ""
 		sections.push(`\n**${group.group}${level}**:`)
-		sections.push("| Name | Value | Usage |")
-		sections.push("|------|-------|-------|")
-		for (const t of group.tokens) {
-			sections.push(`| ${t.name} | \`${t.value}\` | ${t.usage} |`)
-		}
+		sections.push(
+			mdTable(
+				["Name", "Value", "Usage"],
+				group.tokens.map((t) => [t.name, `\`${t.value}\``, t.usage]),
+			),
+		)
 	}
 	return sections.join("\n")
 }
-
-// ── Spacing Reference ────────────────────────────────────────────
 
 export function buildSpacingReference(tokens: DesignTokens | null): string {
 	if (!tokens || tokens.spacing.length === 0) return ""
-
-	const sections: string[] = []
-	sections.push("\n### Spacing")
-	sections.push("| Name | Value | Usage |")
-	sections.push("|------|-------|-------|")
-	for (const t of tokens.spacing) {
-		sections.push(`| ${t.name} | \`${t.value}\` | ${t.usage} |`)
-	}
-	return sections.join("\n")
+	return `\n### Spacing\n${mdTable(
+		["Name", "Value", "Usage"],
+		tokens.spacing.map((t) => [t.name, `\`${t.value}\``, t.usage]),
+	)}`
 }
-
-// ── Border Radius Reference ─────────────────────────────────────
 
 export function buildBorderRadiusReference(tokens: DesignTokens | null): string {
 	if (!tokens || tokens.borderRadius.length === 0) return ""
-
-	const sections: string[] = []
-	sections.push("\n### Border Radius")
-	sections.push("| Name | Value |")
-	sections.push("|------|-------|")
-	for (const t of tokens.borderRadius) {
-		sections.push(`| ${t.name} | \`${t.value}\` |`)
-	}
-	return sections.join("\n")
+	return `\n### Border Radius\n${mdTable(
+		["Name", "Value"],
+		tokens.borderRadius.map((t) => [t.name, `\`${t.value}\``]),
+	)}`
 }
-
-// ── Shadows Reference ───────────────────────────────────────────
 
 export function buildShadowsReference(tokens: DesignTokens | null): string {
 	if (!tokens || tokens.shadows.length === 0) return ""
-
-	const sections: string[] = []
-	sections.push("\n### Shadows")
-	sections.push("| Name | Value |")
-	sections.push("|------|-------|")
-	for (const t of tokens.shadows) {
-		sections.push(`| ${t.name} | \`${t.value}\` |`)
-	}
-	return sections.join("\n")
+	return `\n### Shadows\n${mdTable(
+		["Name", "Value"],
+		tokens.shadows.map((t) => [t.name, `\`${t.value}\``]),
+	)}`
 }
-
-// ── Motion Tokens Reference ─────────────────────────────────────
 
 export function buildMotionReference(tokens: DesignTokens | null): string {
 	if (!tokens?.motion || tokens.motion.length === 0) return ""
-
-	const sections: string[] = []
-	sections.push("\n### Motion Tokens")
-	sections.push("| Name | Duration | Easing | Usage |")
-	sections.push("|------|----------|--------|-------|")
-	for (const t of tokens.motion) {
-		sections.push(`| ${t.name} | \`${t.duration}\` | \`${t.easing}\` | ${t.usage} |`)
-	}
-	return sections.join("\n")
+	return `\n### Motion Tokens\n${mdTable(
+		["Name", "Duration", "Easing", "Usage"],
+		tokens.motion.map((t) => [t.name, t.duration, t.easing, t.usage]),
+	)}`
 }
-
-// ── Breakpoints Reference ───────────────────────────────────────
 
 export function buildBreakpointsReference(
 	breakpoints: Array<{ name: string; value: string }>,
 	label?: string,
 ): string {
 	if (breakpoints.length === 0) return ""
-
-	const sections: string[] = []
-	sections.push(`\n### ${label ?? "Breakpoints"}`)
-	sections.push("| Name | Value |")
-	sections.push("|------|-------|")
-	for (const bp of breakpoints) {
-		sections.push(`| ${bp.name} | \`${bp.value}\` |`)
-	}
-	return sections.join("\n")
+	return `\n### ${label ?? "Breakpoints"}\n${mdTable(
+		["Name", "Value"],
+		breakpoints.map((b) => [b.name, `\`${b.value}\``]),
+	)}`
 }
-
-// ── Z-Index Reference ───────────────────────────────────────────
 
 export function buildZIndexReference(tokens: DesignTokens | null): string {
 	if (!tokens || tokens.zIndex.length === 0) return ""
-
-	const sections: string[] = []
-	sections.push("\n### Z-Index")
-	sections.push("| Name | Value |")
-	sections.push("|------|-------|")
-	for (const t of tokens.zIndex) {
-		sections.push(`| ${t.name} | \`${t.value}\` |`)
-	}
-	return sections.join("\n")
+	return `\n### Z-Index\n${mdTable(
+		["Name", "Value"],
+		tokens.zIndex.map((t) => [t.name, `\`${t.value}\``]),
+	)}`
 }
-
-// ── Theme Variants Reference ────────────────────────────────────
 
 export function buildThemeVariantsReference(tokens: DesignTokens | null): string {
 	if (!tokens?.themeVariants || tokens.themeVariants.length === 0) return ""
@@ -134,25 +90,21 @@ export function buildThemeVariantsReference(tokens: DesignTokens | null): string
 	}
 	for (const variant of tokens.themeVariants) {
 		sections.push(`\n**${variant.name}** (${variant.surfaceStrategy}):`)
-		sections.push("| Token | Value | Derivation |")
-		sections.push("|-------|-------|------------|")
-		for (const override of variant.colorOverrides) {
-			sections.push(
-				`| ${override.tokenName} | \`${override.value}\` | ${override.derivation ?? "-"} |`,
-			)
-		}
+		sections.push(
+			mdTable(
+				["Token", "Value", "Derivation"],
+				variant.colorOverrides.map((o) => [o.tokenName, `\`${o.value}\``, o.derivation ?? "-"]),
+			),
+		)
 	}
 	return sections.join("\n")
 }
-
-// ── Typography Reference ────────────────────────────────────────
 
 export function buildTypographyReference(typo: TypographySystem | null): string {
 	if (!typo) return ""
 
 	const sections: string[] = []
 
-	// Font Families
 	if (typo.fontFamilyDefs && typo.fontFamilyDefs.length > 0) {
 		sections.push("### Font Families")
 		for (const f of typo.fontFamilyDefs) {
@@ -165,49 +117,49 @@ export function buildTypographyReference(typo: TypographySystem | null): string 
 		}
 	}
 
-	// Type Scale
 	if (typo.scale.length > 0) {
 		sections.push("\n### Type Scale")
-		sections.push("| Name | Font Size | Line Height | Font Weight | Usage |")
-		sections.push("|------|-----------|-------------|-------------|-------|")
-		for (const s of typo.scale) {
-			sections.push(
-				`| ${s.name} | \`${s.fontSize}\` | ${s.lineHeight ? `\`${s.lineHeight}\`` : "—"} | ${s.fontWeight ?? "—"} | ${s.usage} |`,
-			)
-		}
+		sections.push(
+			mdTable(
+				["Name", "Font Size", "Line Height", "Font Weight", "Usage"],
+				typo.scale.map((s) => [
+					s.name,
+					`\`${s.fontSize}\``,
+					s.lineHeight ? `\`${s.lineHeight}\`` : "—",
+					s.fontWeight ?? "—",
+					s.usage,
+				]),
+			),
+		)
 	}
 
-	// Font Weights
 	if (typo.fontWeights.length > 0) {
-		sections.push("\n### Font Weights")
-		sections.push("| Name | Value |")
-		sections.push("|------|-------|")
-		for (const w of typo.fontWeights) {
-			sections.push(`| ${w.name} | \`${w.value}\` |`)
-		}
+		sections.push(
+			`\n### Font Weights\n${mdTable(
+				["Name", "Value"],
+				typo.fontWeights.map((w) => [w.name, w.value]),
+			)}`,
+		)
 	}
 
-	// Line Heights
 	if (typo.lineHeights.length > 0) {
-		sections.push("\n### Line Heights")
-		sections.push("| Name | Value |")
-		sections.push("|------|-------|")
-		for (const lh of typo.lineHeights) {
-			sections.push(`| ${lh.name} | \`${lh.value}\` |`)
-		}
+		sections.push(
+			`\n### Line Heights\n${mdTable(
+				["Name", "Value"],
+				typo.lineHeights.map((lh) => [lh.name, lh.value]),
+			)}`,
+		)
 	}
 
-	// Letter Spacings
 	if (typo.letterSpacings && typo.letterSpacings.length > 0) {
-		sections.push("\n### Letter Spacings")
-		sections.push("| Name | Value | Usage |")
-		sections.push("|------|-------|-------|")
-		for (const ls of typo.letterSpacings) {
-			sections.push(`| ${ls.name} | \`${ls.value}\` | ${ls.usage} |`)
-		}
+		sections.push(
+			`\n### Letter Spacings\n${mdTable(
+				["Name", "Value", "Usage"],
+				typo.letterSpacings.map((ls) => [ls.name, ls.value, ls.usage]),
+			)}`,
+		)
 	}
 
-	// Responsive Scaling
 	if (typo.responsiveScaling && typo.responsiveScaling.length > 0) {
 		sections.push("\n### Responsive Font Scaling")
 		for (const rs of typo.responsiveScaling) {
@@ -220,50 +172,49 @@ export function buildTypographyReference(typo: TypographySystem | null): string 
 	return sections.join("\n")
 }
 
-// ── Layout Reference ────────────────────────────────────────────
-
 export function buildLayoutReference(
 	layout: LayoutSystem | null,
 	options?: { compact?: boolean },
 ): string {
 	if (!layout) return ""
 
-	const sections: string[] = []
-
 	if (options?.compact) {
-		sections.push(`\n### Layout\n**Approach**: ${layout.approach}`)
-
-		if (layout.containers.length > 0) {
-			for (const c of layout.containers) {
-				const maxW = c.maxWidth ? `max-width: \`${c.maxWidth}\`` : ""
-				const pad = c.padding ? `padding: \`${c.padding}\`` : ""
-				const dims = [maxW, pad].filter(Boolean).join(", ")
-				sections.push(`- **${c.name}**: ${dims}`)
-			}
-		}
-
-		if (layout.grids.length > 0) {
-			for (const g of layout.grids) {
-				const cols = g.columns ? `${g.columns} columns` : ""
-				const gap = g.gap ? `gap: \`${g.gap}\`` : ""
-				const details = [g.type, cols, gap].filter(Boolean).join(", ")
-				sections.push(`- Grid: ${details}`)
-			}
-		}
-
-		return sections.join("\n")
+		return buildLayoutCompact(layout)
 	}
 
-	// Layout Approach
+	return buildLayoutFull(layout)
+}
+
+function buildLayoutCompact(layout: LayoutSystem): string {
+	const sections: string[] = []
+	sections.push(`\n### Layout\n**Approach**: ${layout.approach}`)
+
+	if (layout.containers.length > 0) {
+		for (const c of layout.containers) {
+			const dims = formatContainerDims(c.maxWidth, c.padding)
+			sections.push(`- **${c.name}**: ${dims}`)
+		}
+	}
+
+	if (layout.grids.length > 0) {
+		for (const g of layout.grids) {
+			const details = formatGridDims(g.type, g.columns, g.gap)
+			sections.push(`- Grid: ${details}`)
+		}
+	}
+
+	return sections.join("\n")
+}
+
+function buildLayoutFull(layout: LayoutSystem): string {
+	const sections: string[] = []
+
 	sections.push(`### Layout Approach\n${layout.approach}`)
 
-	// Containers
 	if (layout.containers.length > 0) {
 		sections.push("\n### Containers")
 		for (const c of layout.containers) {
-			const maxW = c.maxWidth ? `max-width: \`${c.maxWidth}\`` : ""
-			const pad = c.padding ? `padding: \`${c.padding}\`` : ""
-			const dims = [maxW, pad].filter(Boolean).join(", ")
+			const dims = formatContainerDims(c.maxWidth, c.padding)
 			sections.push(`- **${c.name}**: ${dims}`)
 
 			if (c.responsiveOverrides && c.responsiveOverrides.length > 0) {
@@ -279,18 +230,14 @@ export function buildLayoutReference(
 		}
 	}
 
-	// Grids
 	if (layout.grids.length > 0) {
 		sections.push("\n### Grid Systems")
 		for (const g of layout.grids) {
-			const cols = g.columns ? `${g.columns} columns` : ""
-			const gap = g.gap ? `gap: \`${g.gap}\`` : ""
-			const details = [g.type, cols, gap].filter(Boolean).join(", ")
+			const details = formatGridDims(g.type, g.columns, g.gap)
 			sections.push(`- ${details}`)
 		}
 	}
 
-	// Navigation
 	if (layout.navigation.length > 0) {
 		sections.push("\n### Navigation Patterns")
 		for (const n of layout.navigation) {
@@ -298,7 +245,6 @@ export function buildLayoutReference(
 		}
 	}
 
-	// Spacing Rhythm
 	if (layout.spacingRhythm && layout.spacingRhythm.length > 0) {
 		sections.push("\n### Spacing Rhythm")
 		for (const sr of layout.spacingRhythm) {
@@ -309,36 +255,50 @@ export function buildLayoutReference(
 	return sections.join("\n")
 }
 
-// ── Interactions Reference ──────────────────────────────────────
+function formatContainerDims(maxWidth?: string | null, padding?: string | null): string {
+	const maxW = maxWidth ? `max-width: \`${maxWidth}\`` : ""
+	const pad = padding ? `padding: \`${padding}\`` : ""
+	return [maxW, pad].filter(Boolean).join(", ")
+}
+
+function formatGridDims(type: string, columns?: number | null, gap?: string | null): string {
+	const cols = columns ? `${columns} columns` : ""
+	const gapStr = gap ? `gap: \`${gap}\`` : ""
+	return [type, cols, gapStr].filter(Boolean).join(", ")
+}
 
 export function buildInteractionsReference(interactions: InteractionPatterns | null): string {
 	if (!interactions) return ""
 
 	const sections: string[] = []
 
-	// Animations
 	if (interactions.animations.length > 0) {
 		sections.push("### Animations")
-		sections.push("| Name | Type | Description | Duration | Easing | Trigger |")
-		sections.push("|------|------|-------------|----------|--------|---------|")
-		for (const a of interactions.animations) {
-			sections.push(
-				`| ${a.name} | ${a.type} | ${a.description} | ${a.duration ?? "—"} | ${a.easing ?? "—"} | ${a.trigger ?? "—"} |`,
-			)
-		}
+		sections.push(
+			mdTable(
+				["Name", "Type", "Description", "Duration", "Easing", "Trigger"],
+				interactions.animations.map((a) => [
+					a.name,
+					a.type,
+					a.description,
+					a.duration ?? "—",
+					a.easing ?? "—",
+					a.trigger ?? "—",
+				]),
+			),
+		)
 	}
 
-	// Transitions
 	if (interactions.transitions.length > 0) {
 		sections.push("\n### Transitions")
-		sections.push("| Property | Duration | Easing |")
-		sections.push("|----------|----------|--------|")
-		for (const t of interactions.transitions) {
-			sections.push(`| ${t.property} | \`${t.duration}\` | \`${t.easing}\` |`)
-		}
+		sections.push(
+			mdTable(
+				["Property", "Duration", "Easing"],
+				interactions.transitions.map((t) => [t.property, t.duration, t.easing]),
+			),
+		)
 	}
 
-	// Gestures
 	if (interactions.gestures.length > 0) {
 		sections.push("\n### Gestures")
 		for (const g of interactions.gestures) {
@@ -348,7 +308,6 @@ export function buildInteractionsReference(interactions: InteractionPatterns | n
 		}
 	}
 
-	// Choreography
 	if (interactions.choreography && interactions.choreography.length > 0) {
 		sections.push("\n### State Choreography")
 		for (const ch of interactions.choreography) {
@@ -362,8 +321,6 @@ export function buildInteractionsReference(interactions: InteractionPatterns | n
 
 	return sections.join("\n")
 }
-
-// ── Responsive Reference ────────────────────────────────────────
 
 export function buildResponsiveReference(
 	responsive: ResponsiveStrategy | null,
@@ -398,7 +355,6 @@ export function buildResponsiveReference(
 		}
 	}
 
-	// Token breakpoints as fallback/supplement
 	if (tokens && tokens.breakpoints.length > 0) {
 		if (!responsive || responsive.breakpoints.length === 0) {
 			sections.push(buildBreakpointsReference(tokens.breakpoints, "Breakpoints (from tokens)"))
@@ -407,8 +363,6 @@ export function buildResponsiveReference(
 
 	return sections.join("\n")
 }
-
-// ── Component Catalog Reference ─────────────────────────────────
 
 export function buildComponentCatalogReference(components: ComponentCatalog | null): string {
 	if (!components || components.components.length === 0) return ""

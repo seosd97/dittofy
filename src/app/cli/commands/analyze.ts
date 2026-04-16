@@ -119,8 +119,19 @@ export const analyzeCommand = defineCommand({
 			if (result.success) {
 				logger.info(`Analysis complete in ${(result.duration / 1000).toFixed(1)}s`)
 				logger.info(`Output: ${result.outputDir}`)
-				logger.info("  analysis.md  — design system summary")
-				logger.info("  analysis.json — structured data (for ditto generate)")
+				if (result.aspects) {
+					const { succeeded, failed } = result.aspects
+					if (failed.length > 0) {
+						logger.info(`Aspects: ${succeeded.join(", ")} (failed: ${failed.join(", ")})`)
+					} else {
+						logger.info(`Aspects: ${succeeded.join(", ")}`)
+					}
+				}
+				if (result.filesWritten) {
+					for (const file of result.filesWritten) {
+						logger.info(`  ${file}`)
+					}
+				}
 				if (result.usage) {
 					logger.info(
 						`LLM usage: ${result.usage.totalCalls} calls, ${result.usage.totalTokens.toLocaleString()} tokens`,
@@ -151,16 +162,12 @@ async function runAnalyzeDryRun(source: string, includePaths?: string[]): Promis
 	try {
 		// Detect monorepo
 		const { info: monorepoInfo } = await detectMonorepo(resolved.localPath)
-		const monorepoParams = monorepoInfo
-			? {
-					rootPath: monorepoInfo.rootPath,
-					targetRelative: monorepoInfo.targetRelative,
-					depPaths: monorepoInfo.depPaths,
-				}
-			: undefined
 
-		// Run extraction only (Phase 1) — no LLM calls
-		const phase1Result = await runExtraction(resolved.localPath, monorepoParams, includePaths)
+		const phase1Result = await runExtraction(
+			resolved.localPath,
+			monorepoInfo ?? undefined,
+			includePaths,
+		)
 
 		if (!phase1Result.data) {
 			logger.error("Extraction failed:")

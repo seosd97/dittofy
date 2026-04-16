@@ -19,8 +19,8 @@ export type {
 }
 
 /**
- * 단일 진실 원천: aspect 이름 → 분석 결과 타입 매핑.
- * 새 aspect 추가 시 여기에 한 줄 추가하면 AnalysisResult에 자동 반영.
+ * Single source of truth: aspect name → analysis result type mapping.
+ * Add one line here when adding a new aspect; AnalysisResult updates automatically.
  */
 export interface AspectTypeMap {
 	designTokens: DesignTokens

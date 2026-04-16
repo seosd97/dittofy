@@ -4,7 +4,7 @@ import { type ComponentCatalog, componentInfoSchema, componentPatternSchema } fr
 
 const DEFAULT_BATCH_SIZE = 5
 
-/** 청크 분석용 스키마 (consistency 제외) */
+/** Schema for chunk analysis (excluding consistency) */
 export const componentChunkSchema = z.object({
 	components: z.array(componentInfoSchema),
 	patterns: z.array(componentPatternSchema),
@@ -13,8 +13,8 @@ export const componentChunkSchema = z.object({
 export type ComponentChunk = z.infer<typeof componentChunkSchema>
 
 /**
- * codeContext에서 컴포넌트 파일 블록을 추출하여 배치별 ChunkTarget으로 분할.
- * 컨텍스트 형식: `--- path (category) ---\n<content>`
+ * Extract component file blocks from codeContext and split into batched ChunkTargets.
+ * Context format: `--- path (category) ---\n<content>`
  */
 export function extractComponentChunks(
 	codeContext: string,
@@ -25,7 +25,7 @@ export function extractComponentChunks(
 		return [{ label: "all", context: codeContext }]
 	}
 
-	// 배치로 그룹화
+	// Group into batches
 	const chunks: ChunkTarget[] = []
 	const totalBatches = Math.ceil(blocks.length / batchSize)
 
@@ -72,31 +72,34 @@ function parseCodeBlocks(codeContext: string): CodeBlock[] {
 }
 
 /**
- * 배치별 프롬프트 생성.
- * 기본 프롬프트(파일 구조 + 설정)에 해당 배치의 소스 코드만 추가.
+ * Build per-batch prompt.
+ * Appends only the batch's source code to the base prompt (file structure + config).
  */
 export function buildComponentChunkPrompt(basePrompt: string, chunk: ChunkTarget): string {
 	return `${basePrompt}\n\n## Source Code\n${chunk.context}`
 }
 
 /**
- * 배치 결과를 하나의 ComponentCatalog로 병합.
- * components는 name 기반 dedup (상세도 높은 엔트리 선호),
- * patterns는 이름 기준 중복 제거.
+ * Merge batch results into a single ComponentCatalog.
+ * Components are deduped by name (preferring entries with higher detail).
+ * Patterns are deduped by name.
  */
 export function mergeComponentChunks(chunks: unknown[]): ComponentCatalog {
 	const componentMap = new Map<string, ComponentChunk["components"][number]>()
-	for (const chunk of chunks as ComponentChunk[]) {
+	const patternMap = new Map<string, ComponentChunk["patterns"][number]>()
+
+	for (const raw of chunks) {
+		const parsed = componentChunkSchema.safeParse(raw)
+		if (!parsed.success) continue
+		const chunk = parsed.data
+
 		for (const comp of chunk.components) {
 			const existing = componentMap.get(comp.name)
 			if (!existing || componentDetailScore(comp) > componentDetailScore(existing)) {
 				componentMap.set(comp.name, comp)
 			}
 		}
-	}
 
-	const patternMap = new Map<string, ComponentChunk["patterns"][number]>()
-	for (const chunk of chunks as ComponentChunk[]) {
 		for (const p of chunk.patterns) {
 			if (!patternMap.has(p.name)) {
 				patternMap.set(p.name, p)
@@ -110,7 +113,7 @@ export function mergeComponentChunks(chunks: unknown[]): ComponentCatalog {
 	}
 }
 
-/** 더 풍부한 데이터를 가진 엔트리에 높은 점수 */
+/** Higher score for entries with richer data */
 function componentDetailScore(c: ComponentChunk["components"][number]): number {
 	let score = c.variants.length
 	if (c.variantSpecs) score += c.variantSpecs.length * 2

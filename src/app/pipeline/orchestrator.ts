@@ -1,13 +1,12 @@
 import { resolve } from "node:path"
 import type { AnalysisResult } from "@defs/analysis.js"
 import type { DittoConfig } from "@defs/config.js"
-import type { FileTreeNode } from "@defs/extraction.js"
-import type { ExtractionOutput } from "@defs/extraction.js"
+import type { ExtractionOutput, FileTreeNode } from "@defs/extraction.js"
 import type { PhaseError } from "@defs/pipeline.js"
 import type { AnalysisPlan } from "@domain/analysis/plan-parser.js"
 import { formatReconciliation, reconcileAnalysis } from "@domain/analysis/reconciliation.js"
 import { evaluateAnalysisViability } from "@domain/analysis/viability.js"
-import { TIER_THRESHOLDS } from "@domain/constants/analysis.js"
+import { ANALYSIS, TIER_THRESHOLDS } from "@domain/constants/analysis.js"
 import { renderAnalysisMarkdown } from "@domain/rendering/analysis-renderer.js"
 import { resolveEnvironment } from "@domain/rendering/resolve-environment.js"
 import {
@@ -35,17 +34,28 @@ import { validateAnalysisConfig, validateGenerateInput } from "./validation.js"
 import { executeWaves } from "./wave-executor.js"
 import { createWorkspace } from "./workspace.js"
 
+export interface AspectBreakdown {
+	succeeded: string[]
+	failed: string[]
+}
+
+export interface DetailedUsage {
+	totalCalls: number
+	totalInputTokens: number
+	totalOutputTokens: number
+	totalReasoningTokens: number
+	totalTokens: number
+	records?: { phase: string; analyzer: string; inputTokens: number; outputTokens: number }[]
+}
+
 export interface PipelineResult {
 	success: boolean
 	outputDir: string
 	duration: number
 	errors: PhaseError[]
-	usage?: {
-		totalCalls: number
-		totalInputTokens: number
-		totalOutputTokens: number
-		totalTokens: number
-	}
+	aspects?: AspectBreakdown
+	filesWritten?: string[]
+	usage?: DetailedUsage
 }
 
 export interface AnalysisPipelineResult {
@@ -54,12 +64,9 @@ export interface AnalysisPipelineResult {
 	outputDir: string
 	duration: number
 	errors: PhaseError[]
-	usage?: {
-		totalCalls: number
-		totalInputTokens: number
-		totalOutputTokens: number
-		totalTokens: number
-	}
+	aspects?: AspectBreakdown
+	filesWritten?: string[]
+	usage?: DetailedUsage
 }
 
 export interface GenerateConfig {
@@ -96,6 +103,7 @@ export async function runAnalysisPipeline(
 	const ctx = createPipelineContext(source, resolved.localPath, config, overrides)
 	const { llmClient: client, usage } = ctx
 	let workspace: Awaited<ReturnType<typeof createWorkspace>> | null = null
+	let succeeded = false
 
 	try {
 		workspace = await createWorkspace(ctx.projectName)
@@ -179,41 +187,21 @@ export async function runAnalysisPipeline(
 		}
 
 		// Write workspace files for planning
-		if (isMonorepo && depPackagePaths.length > 0) {
-			// Dep-based tree: target files + dep package trees (already combined in fileTree)
-			const targetTree = extraction.extraction.fileTree.filter(
-				(n) => !depPackagePaths.includes(n.path),
-			)
-			const depNodes = extraction.extraction.fileTree.filter((n) =>
-				depPackagePaths.includes(n.path),
-			)
-
-			const lines: string[] = ["# Project Structure\n"]
-			lines.push(`## Target: ${targetRelative}`)
-			lines.push(renderFileTree(targetTree, "", 0))
-			lines.push("")
-
-			if (depNodes.length > 0) {
-				lines.push("## Related Packages")
-				for (const dep of depNodes) {
-					lines.push(`### ${dep.path}`)
-					if (dep.children) {
-						lines.push(renderFileTree(dep.children, "", 0))
-					}
-					lines.push("")
-				}
-			}
-
-			await workspace.writeMarkdown("file-tree.md", lines.filter(Boolean).join("\n"))
-		} else if (isMonorepo) {
-			await workspace.writeMarkdown(
-				"file-tree.md",
-				renderMonorepoTree(extraction.extraction.fileTree, targetRelative),
-			)
-		} else {
-			await workspace.writeMarkdown("file-tree.md", renderFileTree(extraction.extraction.fileTree))
-		}
-		await workspace.writeMarkdown("project-meta.md", renderProjectMeta(extraction))
+		await writeWorkspaceTree(
+			workspace,
+			extraction.extraction.fileTree,
+			isMonorepo,
+			targetRelative,
+			depPackagePaths,
+		)
+		await workspace.writeMarkdown(
+			"project-meta.md",
+			renderProjectMeta({
+				techStack: extraction.techStack,
+				projectMeta: extraction.extraction.projectMeta,
+				monorepo: extraction.monorepo,
+			}),
+		)
 
 		// Phase 2 - Pass 1: Analysis Planning
 		phaseStart("Phase 2", "Planning analysis...")
@@ -280,7 +268,7 @@ export async function runAnalysisPipeline(
 			client,
 			usage,
 			language: config.language === "ko" ? "ko" : "en",
-			concurrency: 3,
+			concurrency: ANALYSIS.concurrency,
 		})
 
 		const succeededCount = resolvedPlan.aspects.length - failedAnalyzers.length
@@ -378,16 +366,40 @@ export async function runAnalysisPipeline(
 			renderAnalysisMarkdown(analysisResult),
 		)
 
+		succeeded = true
+
 		return {
 			success: true,
 			analysisJsonPath,
 			outputDir: ctx.outputDir,
 			duration: Date.now() - startTime,
 			errors,
-			usage: usage.getSummary(),
+			aspects: {
+				succeeded: resolvedPlan.aspects.filter((a) => !failedAnalyzers.includes(a)),
+				failed: failedAnalyzers,
+			},
+			filesWritten: ["analysis.json", "analysis.md"],
+			usage: usage.getSummary() as DetailedUsage,
+		}
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error)
+		errors.push({ phase: "Pipeline", message })
+		return {
+			success: false,
+			analysisJsonPath: "",
+			outputDir: ctx.outputDir,
+			duration: Date.now() - startTime,
+			errors,
 		}
 	} finally {
-		await workspace?.cleanup()
+		if (succeeded || !workspace) {
+			await workspace?.cleanup()
+		} else {
+			logger.info("")
+			logger.warn("Workspace preserved for resume:")
+			logger.warn(`  ${workspace.tmpDir}`)
+			logger.warn("Re-run with debug mode to inspect intermediate results.")
+		}
 		await resolved.cleanup()
 	}
 }
@@ -502,5 +514,40 @@ export async function runPipeline(
 		duration: analysisResult.duration + generateResult.duration,
 		errors: [...analysisResult.errors, ...generateResult.errors],
 		usage: analysisResult.usage,
+	}
+}
+
+async function writeWorkspaceTree(
+	workspace: Awaited<ReturnType<typeof createWorkspace>>,
+	fileTree: FileTreeNode[],
+	isMonorepo: boolean,
+	targetRelative: string,
+	depPackagePaths: string[],
+): Promise<void> {
+	if (isMonorepo && depPackagePaths.length > 0) {
+		const targetTree = fileTree.filter((n) => !depPackagePaths.includes(n.path))
+		const depNodes = fileTree.filter((n) => depPackagePaths.includes(n.path))
+
+		const lines: string[] = ["# Project Structure\n"]
+		lines.push(`## Target: ${targetRelative}`)
+		lines.push(renderFileTree(targetTree, "", 0))
+		lines.push("")
+
+		if (depNodes.length > 0) {
+			lines.push("## Related Packages")
+			for (const dep of depNodes) {
+				lines.push(`### ${dep.path}`)
+				if (dep.children) {
+					lines.push(renderFileTree(dep.children, "", 0))
+				}
+				lines.push("")
+			}
+		}
+
+		await workspace.writeMarkdown("file-tree.md", lines.filter(Boolean).join("\n"))
+	} else if (isMonorepo) {
+		await workspace.writeMarkdown("file-tree.md", renderMonorepoTree(fileTree, targetRelative))
+	} else {
+		await workspace.writeMarkdown("file-tree.md", renderFileTree(fileTree))
 	}
 }

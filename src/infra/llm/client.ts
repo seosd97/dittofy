@@ -368,7 +368,7 @@ ${schemaText}`
 			return { object: firstTry.data, usage: response.usage }
 		}
 		// Second try: normalize null→[] for GLM models that return null for empty arrays
-		const normalized = normalizeNullArrays(response.output)
+		const normalized = normalizeNullArrays(response.output, params.schema)
 		const validated = params.schema.safeParse(normalized)
 		if (validated.success) {
 			return { object: validated.data, usage: response.usage }
@@ -395,22 +395,120 @@ ${schemaText}`
 // ── Helpers ─────────────────────────────────────────────────
 
 /**
- * Recursively convert null values to [] only when at least one sibling
- * is an array. This handles GLM models returning null for empty arrays
- * without converting legitimate null values (e.g. nullable strings).
+ * Recursively convert null values to [] only for fields that the Zod schema
+ * expects to be arrays. This handles GLM models returning null for empty arrays
+ * without converting legitimate null values (e.g. nullable strings like defaultTheme).
  */
-function normalizeNullArrays(obj: unknown): unknown {
+function normalizeNullArrays(obj: unknown, schema: z.ZodType): unknown {
 	if (obj === null || obj === undefined) return obj
-	if (Array.isArray(obj)) return obj.map(normalizeNullArrays)
+	if (Array.isArray(obj)) return obj
+	if (typeof obj !== "object") return obj
+
+	const shape = extractObjectShape(schema)
+	if (!shape) {
+		return fallbackNormalizeNullArrays(obj)
+	}
+
+	const result: Record<string, unknown> = {}
+	for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+		const fieldSchema = shape[key]
+		if (value === null && fieldSchema && isZodArrayType(fieldSchema)) {
+			result[key] = []
+		} else if (
+			typeof value === "object" &&
+			value !== null &&
+			!Array.isArray(value) &&
+			fieldSchema
+		) {
+			const inner = deepUnwrap(fieldSchema)
+			result[key] = normalizeNullArrays(value, inner)
+		} else if (Array.isArray(value)) {
+			result[key] = value
+		} else {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+const MAX_UNWRAP_DEPTH = 20
+
+type ZodDef = {
+	typeName?: string
+	innerType?: z.ZodType
+	shape?: Record<string, z.ZodType> | (() => Record<string, z.ZodType>)
+	type?: z.ZodType
+	brand?: unknown
+	catchValue?: unknown
+	getter?: () => z.ZodType
+	in?: z.ZodType
+	schema?: z.ZodType
+}
+
+function isZodArrayType(schema: z.ZodType): boolean {
+	const unwrapped = deepUnwrap(schema)
+	const def = unwrapped._def as ZodDef
+	return def?.typeName === "ZodArray"
+}
+
+function deepUnwrap(schema: z.ZodType): z.ZodType {
+	let current: z.ZodType = schema
+	for (let i = 0; i < MAX_UNWRAP_DEPTH; i++) {
+		const next = unwrapOneLevel(current)
+		if (next === current) return current
+		current = next
+	}
+	return current
+}
+
+function unwrapOneLevel(schema: z.ZodType): z.ZodType {
+	const def = schema._def as ZodDef
+	if (!def) return schema
+
+	switch (def.typeName) {
+		case "ZodOptional":
+		case "ZodNullable":
+		case "ZodDefault":
+		case "ZodReadonly":
+			return def.innerType ?? schema
+		case "ZodBranded":
+			return (def.type as z.ZodType | undefined) ?? schema
+		case "ZodCatch":
+			return def.innerType ?? schema
+		case "ZodPipeline":
+			return def.in ?? schema
+		case "ZodEffects":
+			return def.schema ?? schema
+		case "ZodLazy":
+			return def.getter ? def.getter() : schema
+		default:
+			return schema
+	}
+}
+
+function extractObjectShape(schema: z.ZodType): Record<string, z.ZodType> | null {
+	const unwrapped = deepUnwrap(schema)
+	const def = unwrapped._def as ZodDef
+	if (def?.typeName === "ZodObject") {
+		const shape =
+			typeof def.shape === "function" ? (def.shape as () => Record<string, z.ZodType>)() : def.shape
+		return (shape ?? {}) as Record<string, z.ZodType>
+	}
+	return null
+}
+
+function fallbackNormalizeNullArrays(obj: unknown): unknown {
+	if (obj === null || obj === undefined) return obj
+	if (Array.isArray(obj)) return obj
 	if (typeof obj === "object") {
 		const entries = Object.entries(obj as Record<string, unknown>)
-		const hasArraySibling = entries.some(([, v]) => Array.isArray(v))
+		const hasArrayField = entries.some(([, v]) => Array.isArray(v))
 		const result: Record<string, unknown> = {}
 		for (const [key, value] of entries) {
-			if (value === null && hasArraySibling) {
+			if (value === null && hasArrayField) {
 				result[key] = []
 			} else {
-				result[key] = normalizeNullArrays(value)
+				result[key] = fallbackNormalizeNullArrays(value)
 			}
 		}
 		return result

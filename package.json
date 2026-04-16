@@ -16,7 +16,10 @@
 		"url": "https://github.com/seosd97/dittofy/issues"
 	},
 	"exports": {
-		".": "./dist/index.mjs"
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		}
 	},
 	"files": ["dist"],
 	"scripts": {

@@ -1,14 +1,13 @@
 import { runAnalyzer } from "@app/runner.js"
 import type { AnalysisResultMap, AspectName } from "@defs/aspect-map.js"
 import type { AspectDescriptor } from "@defs/descriptor.js"
-import type { CodeChunk } from "@defs/extraction.js"
-import type { ExtractionOutput } from "@defs/extraction.js"
+import type { CodeChunk, ExtractionOutput } from "@defs/extraction.js"
 import type { AnalysisPlan } from "@domain/analysis/plan-parser.js"
 import { ASPECT_REGISTRY } from "@domain/aspects/registry.js"
 import { summarizeResults } from "@domain/rendering/aspect-summarizer.js"
 import type { ILLMClient } from "@infra/llm/client.js"
 import type { UsageTracker } from "@infra/llm/usage.js"
-import { logger } from "@infra/logger.js"
+import { type ProgressTracker, createProgressTracker } from "@infra/progress.js"
 import type { Workspace } from "./workspace.js"
 
 export interface WaveExecutorOptions {
@@ -20,12 +19,14 @@ export interface WaveExecutorOptions {
 	usage: UsageTracker
 	language: "en" | "ko"
 	concurrency: number
+	progress?: ProgressTracker
 }
 
 export async function executeWaves(
 	options: WaveExecutorOptions,
 ): Promise<{ results: AnalysisResultMap; failedAnalyzers: string[] }> {
 	const { plan, codeChunks, extraction, workspace, client, usage, language, concurrency } = options
+	const progress = options.progress ?? createProgressTracker()
 
 	const results: AnalysisResultMap = {
 		designTokens: null,
@@ -38,25 +39,25 @@ export async function executeWaves(
 	}
 	const failedAnalyzers: string[] = []
 
+	const totalAspects = plan.aspects.length
+	progress.start(plan.waves.length, totalAspects)
+
 	for (const wave of plan.waves) {
-		logger.info(`Wave ${wave.order}: ${wave.aspects.join(", ")}`)
 		const waveStart = Date.now()
+		progress.startWave(wave.order, wave.aspects)
 
-		// Build cross-aspect context from completed results
 		const crossCtx = buildCrossAspectContext(results)
-
-		// Run aspects in this wave with concurrency limit
 		const withLimit = createConcurrencyLimiter(concurrency)
 
 		const promises = wave.aspects.map((aspectName) => {
 			const descriptor = ASPECT_REGISTRY[aspectName]
 			if (!descriptor) {
-				logger.warn(`Unknown aspect: ${aspectName}`)
 				return Promise.resolve()
 			}
 
 			return withLimit(async () => {
 				const filePaths = plan.fileSelection[aspectName] ?? []
+				progress.startAspect(aspectName, descriptor.displayName)
 				try {
 					const result = await runAnalyzer(
 						descriptor as AspectDescriptor<typeof aspectName>,
@@ -72,12 +73,11 @@ export async function executeWaves(
 					)
 					;(results as Record<string, unknown>)[aspectName] = result
 
-					// Save intermediate result to workspace
 					await workspace.writeJSON(`result-${aspectName}.json`, result)
-					logger.info(`  ${descriptor.displayName}: completed`)
+					progress.completeAspect(aspectName, descriptor.displayName)
 				} catch (error) {
 					const message = error instanceof Error ? error.message : String(error)
-					logger.warn(`  ${descriptor.displayName} failed: ${message}`)
+					progress.failAspect(aspectName, descriptor.displayName, message)
 					failedAnalyzers.push(aspectName)
 				}
 			})
@@ -88,17 +88,15 @@ export async function executeWaves(
 		const waveSucceeded =
 			wave.aspects.length - wave.aspects.filter((a) => failedAnalyzers.includes(a)).length
 		const waveElapsed = ((Date.now() - waveStart) / 1000).toFixed(1)
-		logger.info(
-			`Wave ${wave.order} complete: ${waveSucceeded}/${wave.aspects.length} succeeded [${waveElapsed}s]`,
-		)
+		progress.completeWave(wave.order, waveSucceeded, wave.aspects.length, `${waveElapsed}s`)
 	}
+
+	const succeededCount = totalAspects - failedAnalyzers.length
+	progress.done(succeededCount, failedAnalyzers.length)
 
 	return { results, failedAnalyzers }
 }
 
-/**
- * Build a markdown summary of completed analysis results for cross-aspect context injection.
- */
 export function buildCrossAspectContext(results: AnalysisResultMap): string {
 	const sections = summarizeResults(results)
 	if (sections.length === 0) return ""

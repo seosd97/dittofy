@@ -110,7 +110,7 @@ function renderPlanAsMarkdown(plan: AnalysisPlan): string {
 	lines.push("## File Selection")
 	for (const [aspect, files] of Object.entries(plan.fileSelection)) {
 		lines.push(`### ${aspect}`)
-		for (const f of files as string[]) {
+		for (const f of files) {
 			lines.push(`- ${f}`)
 		}
 		lines.push("")

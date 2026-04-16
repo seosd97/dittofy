@@ -13,6 +13,8 @@ const DEFAULT_RETRY: RetryConfig = {
 	maxDelayMs: 30_000,
 }
 
+const MAX_RETRY_AFTER_SECONDS = 300
+
 export async function withRetry<T>(
 	fn: () => Promise<T>,
 	config: RetryConfig = DEFAULT_RETRY,
@@ -105,7 +107,7 @@ function calculateDelay(attempt: number, config: RetryConfig, error: unknown): n
 			const retryAfter = headers?.["retry-after"]
 			if (retryAfter) {
 				const seconds = Number.parseInt(retryAfter, 10)
-				if (!Number.isNaN(seconds) && seconds > 0 && seconds <= 300) {
+				if (!Number.isNaN(seconds) && seconds > 0 && seconds <= MAX_RETRY_AFTER_SECONDS) {
 					return seconds * 1_000
 				}
 			}

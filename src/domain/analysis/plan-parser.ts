@@ -33,20 +33,29 @@ export type AnalysisPlan = z.infer<typeof analysisPlanSchema>
 const REQUIRED_FIRST_ASPECT = "designTokens" as const
 
 export function validateAnalysisPlan(plan: AnalysisPlan): AnalysisPlan {
-	// Ensure designTokens is always included
-	const aspects = plan.aspects.includes(REQUIRED_FIRST_ASPECT)
-		? plan.aspects
-		: [REQUIRED_FIRST_ASPECT, ...plan.aspects]
+	const seen = new Set<AspectName>()
+	const dedupedAspects: AspectName[] = []
+	for (const a of plan.aspects) {
+		if (!seen.has(a)) {
+			seen.add(a)
+			dedupedAspects.push(a)
+		}
+	}
 
-	// Ensure designTokens is in Wave 1
-	let waves = plan.waves
-	if (waves.length === 0) {
-		waves = [{ order: 1, aspects }]
-	} else if (!waves[0].aspects.includes(REQUIRED_FIRST_ASPECT)) {
+	const aspects = dedupedAspects.includes(REQUIRED_FIRST_ASPECT)
+		? dedupedAspects
+		: [REQUIRED_FIRST_ASPECT, ...dedupedAspects]
+
+	let waves: AnalysisPlan["waves"]
+	if (plan.waves.length === 0) {
+		waves = [{ order: 1, aspects: [...aspects] }]
+	} else if (!plan.waves[0].aspects.includes(REQUIRED_FIRST_ASPECT)) {
 		waves = [
-			{ ...waves[0], aspects: [REQUIRED_FIRST_ASPECT, ...waves[0].aspects] },
-			...waves.slice(1),
+			{ ...plan.waves[0], aspects: [REQUIRED_FIRST_ASPECT, ...plan.waves[0].aspects] },
+			...plan.waves.slice(1),
 		]
+	} else {
+		waves = plan.waves.map((w) => ({ ...w, aspects: [...w.aspects] }))
 	}
 
 	return { ...plan, aspects, waves }
